@@ -1,0 +1,2 @@
+# MagangAWG
+semester 6
