@@ -13,6 +13,14 @@ from easymodbus.modbusClient import (
 )
 
 class Me31Modbus(Node):
+    """
+    ROS2 Node untuk komunikasi Modbus dengan EBYTE ME31.
+    Fitur:
+        - Koneksi serial ke ME31
+        - Fungsi baca/tulis register untuk AI/AO
+        - Pengaturan sampling range dan output range
+        - Service untuk reboot dan restore factory settings
+    """
 
     def __init__(self):
         super().__init__("me31_node")
@@ -55,7 +63,7 @@ class Me31Modbus(Node):
             raise SystemExit
 
     # ----------------------------------------------------
-    # Public API for Data Transmission
+    # Public API for Data Read/Write
     # ----------------------------------------------------
     def send_data(self, data_type="int", slave_id=1, port="", value=None):
 
@@ -72,12 +80,50 @@ class Me31Modbus(Node):
                 if port == "AO4": self.write_float(slave_id=slave_id, address=0x0006, value=value)
             case _:
                 self.get_logger().error(f"Unsupported data type: {data_type}")
+    
+    def read_data(self, data_type="int", slave_id=1, port=""):
 
-    def read_data(self):
-        pass
+        match data_type:
+            case "int":
+                if port == "AI1": return self.read_int(slave_id=slave_id, address=0x0064)
+                if port == "AI2": return self.read_int(slave_id=slave_id, address=0x0065)
+                if port == "AI3": return self.read_int(slave_id=slave_id, address=0x0066)
+                if port == "AI4": return self.read_int(slave_id=slave_id, address=0x0067)
+            case "float":
+                if port == "AI1": return self.read_float(slave_id=slave_id, address=0x00C8)
+                if port == "AI2": return self.read_float(slave_id=slave_id, address=0x00CA)
+                if port == "AI3": return self.read_float(slave_id=slave_id, address=0x00CC)
+                if port == "AI4": return self.read_float(slave_id=slave_id, address=0x00CE)
+            case _:
+                self.get_logger().error(f"Unsupported data type: {data_type}")
+                return None
 
     # ----------------------------------------------------
-    # Write and Read Helper Functions
+    # Read Helper Functions
+    # ----------------------------------------------------
+    def read_int(self, slave_id, address):
+        """Helper untuk membaca register integer."""
+        try:
+            self.mb_conn.unitidentifier = slave_id
+            result = self.mb_conn.read_inputregisters(address, 1)
+            return result[0]
+        except Exception as e:
+            self.get_logger().error(f"Read Int Error: {e}")
+            return None
+    
+    def read_float(self, slave_id, address):
+        """Helper untuk membaca register float (2 registers)."""
+        try:
+            self.mb_conn.unitidentifier = slave_id
+            result = self.mb_conn.read_inputregisters(address, 2)
+            # Swap byte jika diperlukan oleh slave (umumnya [1, 0])
+            return convert_registers_to_float([result[1], result[0]])
+        except Exception as e:
+            self.get_logger().error(f"Read Float Error: {e}")
+            return None
+
+    # ----------------------------------------------------
+    # Write Helper Functions
     # ----------------------------------------------------
     def write_int(self, slave_id, address, value):
         """Helper untuk menulis register integer."""
@@ -99,28 +145,54 @@ class Me31Modbus(Node):
         except Exception as e:
             self.get_logger().error(f"Write Float Error: {e}")
     
-    def set_output_mode(self, output_mode = 0):
-        """Set output mode pada slave."""
+    # ----------------------------------------------------
+    # Configuration Helper Functions
+    # ----------------------------------------------------
+    def set_input_range(self, input_range, slave_id):
+        """Helper untuk mengatur sampling range pada slave."""
 
-        if output_mode == 0: 
+        if input_range == 0: 
             value = 0x0000  # 0-20mA
-            mode = "0-20mA"
-        elif output_mode == 1:
+            range = "0-20mA"
+        elif input_range == 1:
             value = 0x0001  # 4-20mA
-            mode = "4-20mA"
+            range = "4-20mA"
         else:
-            self.get_logger().error(f"Invalid output mode: {output_mode}")
+            self.get_logger().error(f"Invalid input range: {input_range}")
+            return
+        
+        try:
+            self.write_int(slave_id=slave_id, address=0x04B2, value=value)
+            self.write_int(slave_id=slave_id, address=0x04B3, value=value)
+            self.write_int(slave_id=slave_id, address=0x04B4, value=value)
+            self.write_int(slave_id=slave_id, address=0x04B5, value=value)
+            self.get_logger().info(f"Input range set to {range} for slave {slave_id}")
+        except Exception as e:
+            self.get_logger().error(f"Read Sampling Mode Error: {e}")
+            return None
+    
+    def set_output_range(self, output_range, slave_id):
+        """Set output range pada slave."""
+
+        if output_range == 0: 
+            value = 0x0000  # 0-20mA
+            range = "0-20mA"
+        elif output_range == 1:
+            value = 0x0001  # 4-20mA
+            range = "4-20mA"
+        else:
+            self.get_logger().error(f"Invalid output range: {output_range}")
             return
 
         try:
-            self.write_int(slave_id=1, address=0x0514, value=value)
-            self.write_int(slave_id=1, address=0x0515, value=value)
-            self.write_int(slave_id=1, address=0x0516, value=value)
-            self.write_int(slave_id=1, address=0x0517, value=value)
-            self.get_logger().info(f"Output mode set to {mode}")
+            self.write_int(slave_id=slave_id, address=0x0514, value=value)
+            self.write_int(slave_id=slave_id, address=0x0515, value=value)
+            self.write_int(slave_id=slave_id, address=0x0516, value=value)
+            self.write_int(slave_id=slave_id, address=0x0517, value=value)
+            self.get_logger().info(f"Output range set to {range} for slave {slave_id}")
         except Exception as e:
-            self.get_logger().error(f"Set Output Mode Error: {e}")
-    
+            self.get_logger().error(f"Set Output Range Error: {e}")
+
     #----------------------------------------------------
     # Cleanup and Shutdown
     # ----------------------------------------------------
@@ -138,6 +210,7 @@ class Me31Modbus(Node):
             self.get_logger().error(f"Reboot Error: {e}")
     
     def handle_reboot_request(self, request, response):
+        """Service handler untuk reboot slave."""
         try:
             self.reboot_slave(slave_id=1)
             response.success = True
@@ -162,6 +235,7 @@ class Me31Modbus(Node):
             self.get_logger().error(f"Factory Reset Error: {e}")
     
     def handle_restore_request(self, request, response):
+        """Service handler untuk restore factory settings."""
         try:
             self.restore_factory_settings(slave_id=1)
             response.success = True
@@ -184,18 +258,31 @@ class Me31Modbus(Node):
     # ----------------------------------------------------
     def timer_callback(self):
         """Loop pengiriman data."""
-        # Contoh pengiriman data
-        self.set_output_mode(output_mode=0) # Set output mode ke 0-20mA
+        # Set sampling range dan output range (opsional, diatur sekali saat startup)
+        self.set_output_range(output_range=0, slave_id=1)   # Set output range ke 0-20mA
+        self.set_input_range(input_range=0, slave_id=1)     # Set input range ke 0-20mA
+
+        # Contoh pengiriman data (nanti dijadiin pub sub)
+        self.send_data(data_type="int", slave_id=1, port="AO1", value=3)
+        self.send_data(data_type="int", slave_id=1, port="AO2", value=4)
+        self.send_data(data_type="int", slave_id=1, port="AO3", value=5)
+        self.send_data(data_type="int", slave_id=1, port="AO4", value=6)
 
         self.send_data(data_type="float", slave_id=1, port="AO1", value=1.1)
         self.send_data(data_type="float", slave_id=1, port="AO2", value=1.2)
         self.send_data(data_type="float", slave_id=1, port="AO3", value=1.3)
         self.send_data(data_type="float", slave_id=1, port="AO4", value=1.4)
 
-        # self.send_data(data_type="int", slave_id=1, port="AO1", value=5000)
-        # self.send_data(data_type="int", slave_id=1, port="AO2", value=5000)
-        # self.send_data(data_type="int", slave_id=1, port="AO3", value=5000)
-        # self.send_data(data_type="int", slave_id=1, port="AO4", value=5000)
+        # Contoh pembacaan data (nanti dijadiin pub sub)
+        self.read_data(data_type="int", slave_id=1, port="AI1")
+        self.read_data(data_type="int", slave_id=1, port="AI2")
+        self.read_data(data_type="int", slave_id=1, port="AI3")
+        self.read_data(data_type="int", slave_id=1, port="AI4")
+
+        self.read_data(data_type="float", slave_id=1, port="AI1")
+        self.read_data(data_type="float", slave_id=1, port="AI2")
+        self.read_data(data_type="float", slave_id=1, port="AI3")
+        self.read_data(data_type="float", slave_id=1, port="AI4")
 
 
 def main(args=None):
