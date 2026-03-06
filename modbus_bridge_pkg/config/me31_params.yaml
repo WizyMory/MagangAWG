@@ -1,0 +1,25 @@
+modbus_bridge_node:
+  ros__parameters:
+      port: "/dev/ttyUSB0"
+      slave_id: 1
+      baudrate: 9600
+      parity: "N"
+      stopbits: 1
+      bytesize: 8
+      slave_id: 1
+      ai_factor: 0.001
+      ao_factor: 1000.0
+      reboot_address: 0x07EA
+      reboot_value: 0x5BB5
+
+      ai1_address: 100
+      ai2_address: 101
+      ai3_address: 102
+      ai4_address: 103
+      
+      ao1_address: 100
+      ao2_address: 101
+      ao3_address: 102
+      ao4_address: 103
+
+    
