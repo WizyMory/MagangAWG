@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
+from me31_modbus.me31_node import Me31Modbus
 import rclpy
 from rclpy.node import Node
 from std_srvs.srv import Trigger
-# from me31_interfaces.srv import SendData
 
-from easymodbus import modbusClient 
-from easymodbus.modbusClient import (
-    convert_float_to_two_registers,
-    convert_registers_to_float,
-    Parity,
-    Stopbits
-)
+import pymodbus
+from pymodbus.client import ModbusSerialClient as ModbusClient
+from pymodbus.payload import BinaryPayloadBuilder
+from pymodbus.constants import Endian
 
-class Me31Modbus(Node):
+class Me31PyModbus(Node):
     """
     ROS2 Node untuk komunikasi Modbus dengan EBYTE ME31.
     Fitur:
@@ -23,12 +20,16 @@ class Me31Modbus(Node):
     """
 
     def __init__(self):
-        super().__init__("me31_node")
-        
+        super().__init__("me31_pymodbus_node")
+
         # Modbus connection parameters
         self.port = '/dev/ttyUSB0'
         self.baudrate = 9600
-        self.mb_conn = self.connect_slave()
+        self.parity = 'N'
+        self.stopbits = 1
+
+        # Connect to Modbus slave
+        self.connection_ = self.connect_slave()
         
         # Timer node loop (10 Hz)
         self.create_timer(1/10, self.timer_callback, clock=self.get_clock()) 
@@ -45,26 +46,26 @@ class Me31Modbus(Node):
             'restore_factory_settings',
             self.handle_restore_request
         )
-
+    
     def connect_slave(self):
         try:    
-            client = modbusClient.ModbusClient(self.port)
-            
-            client.baudrate = self.baudrate
-            client.parity = Parity.none
-            client.stopbits = Stopbits.one
+            client = ModbusClient(
+                port=self.port,
+                baudrate=self.baudrate,
+                parity=self.parity,
+                stopbits=self.stopbits
+            )
 
             client.connect()
             self.get_logger().info(f"Connected to Modbus EBYTE on {self.port}")
             return client
-            
         except Exception as e:
             self.get_logger().error(f"Connection failed: {e}")
             raise SystemExit
-
-    # ----------------------------------------------------
-    # Public API for Data Read/Write
-    # ----------------------------------------------------
+    
+    # ----------------------------------------------------------
+    # Modbus Read/Write Functions
+    # ----------------------------------------------------------
     def send_data(self, data_type="int", slave_id=1, port="", value=None):
 
         match data_type:
@@ -80,7 +81,7 @@ class Me31Modbus(Node):
                 if port == "AO4": self.write_float(slave_id=slave_id, address=0x0006, value=value)
             case _:
                 self.get_logger().error(f"Unsupported data type: {data_type}")
-    
+        
     def read_data(self, data_type="int", slave_id=1, port=""):
 
         match data_type:
@@ -98,14 +99,40 @@ class Me31Modbus(Node):
                 self.get_logger().error(f"Unsupported data type: {data_type}")
                 return None
 
+    # ----------------------------------------------------------
+    # Write Helper Functions
+    # ----------------------------------------------------------
+    def write_int(self, slave_id, address, value):
+        """Helper to write integer register."""
+        try:
+            self.connection_.write_register(address=address, value=value, slave=slave_id)
+            self.get_logger().debug(f"Write OK -> Addr:{hex(address)} Val:{value}")
+        except Exception as e:
+            self.get_logger().error(f"Failed to write register: {e}")
+    
+    def write_float(self, slave_id, address, value):
+        """Helper to write 32-bit float register (2 consecutive registers)."""
+        try:
+            # Build payload for 32-bit float (2 registers)
+            builder = BinaryPayloadBuilder(
+                byteorder=Endian.Big,
+                wordorder=Endian.Big
+            )
+            builder.add_32bit_float(value)
+            registers = builder.to_registers()
+            self.connection_.write_registers(address, registers)
+
+            self.get_logger().debug(f"Write OK -> Addr:{hex(address)} Val:{value}")
+        except Exception as e:
+            self.get_logger().error(f"Failed to write float register: {e}")
+
     # ----------------------------------------------------
     # Read Helper Functions
     # ----------------------------------------------------
     def read_int(self, slave_id, address):
         """Helper untuk membaca register integer."""
         try:
-            self.mb_conn.unitidentifier = slave_id
-            result = self.mb_conn.read_input_registers(address, 1)
+            result = self.connection_.read_input_registers(address=address, count=1, slave=slave_id)
             self.get_logger().info(f"Addr:{hex(address)} Val:{result}")
             return result
         except Exception as e:
@@ -115,37 +142,15 @@ class Me31Modbus(Node):
     def read_float(self, slave_id, address):
         """Helper untuk membaca register float (2 registers)."""
         try:
-            self.mb_conn.unitidentifier = slave_id
-            result = self.mb_conn.read_inputregisters(address, 2)
-            # Swap byte jika diperlukan oleh slave (umumnya [1, 0])
-            # return convert_registers_to_float([result[1], result[0]])
+            result = self.connection_.read_input_registers(address=address, count=2, slave=slave_id)
+            if not result.isError():
+                # Often scaled values
+                voltage = result.registers[0] / 10.0  # 0.1V resolution
+                current = result.registers[1] / 100.0  # 0.01A resolution
             return result
         except Exception as e:
             self.get_logger().error(f"Read Float Error: {e}")
             return None
-
-    # ----------------------------------------------------
-    # Write Helper Functions
-    # ----------------------------------------------------
-    def write_int(self, slave_id, address, value):
-        """Helper untuk menulis register integer."""
-        try:
-            self.mb_conn.unitidentifier = slave_id
-            self.mb_conn.write_single_register(address, value)
-            self.get_logger().debug(f"Write OK -> Addr:{hex(address)} Val:{value}")
-        except Exception as e:
-            self.get_logger().error(f"Write Int Error: {e}")
-
-    def write_float(self, slave_id, address, value):
-        """Helper untuk menulis register float (2 registers)."""
-        try:
-            self.mb_conn.unitidentifier = slave_id
-            data = convert_float_to_two_registers(value)
-
-            # Swap byte jika diperlukan oleh slave (umumnya [1, 0])
-            self.mb_conn.write_multiple_registers(address, [data[1], data[0]])
-        except Exception as e:
-            self.get_logger().error(f"Write Float Error: {e}")
     
     # ----------------------------------------------------
     # Configuration Helper Functions
@@ -194,7 +199,7 @@ class Me31Modbus(Node):
             self.get_logger().info(f"Output range set to {range} for slave {slave_id}")
         except Exception as e:
             self.get_logger().error(f"Set Output Range Error: {e}")
-
+    
     #----------------------------------------------------
     # Cleanup and Shutdown
     # ----------------------------------------------------
@@ -205,8 +210,7 @@ class Me31Modbus(Node):
         value = 0x5BB5 # Unique value to trigger reboot
 
         try:
-            self.mb_conn.unitidentifier = slave_id
-            self.mb_conn.write_single_register(address, value)
+            self.write_int(slave_id=slave_id, address=address, value=value)
             self.get_logger().info(f"Reboot command sent to slave {slave_id}")
         except Exception as e:
             self.get_logger().error(f"Reboot Error: {e}")
@@ -230,8 +234,7 @@ class Me31Modbus(Node):
         value = 0x5BB5 # Unique value to trigger factory reset
 
         try:
-            self.mb_conn.unitidentifier = slave_id
-            self.mb_conn.write_single_register(address, value)
+            self.write_int(slave_id=slave_id, address=address, value=value)
             self.get_logger().info(f"Factory reset command sent to slave {slave_id}")
         except Exception as e:
             self.get_logger().error(f"Factory Reset Error: {e}")
@@ -250,14 +253,14 @@ class Me31Modbus(Node):
     
     def destroy_node(self):
         """Cleanup saat node mati."""
-        if hasattr(self, 'mb_conn') and self.mb_conn:
-            self.mb_conn.close()
+        if hasattr(self, 'mb_conn') and self.connection_:
+            self.connection_.close()
             self.get_logger().info("Modbus connection closed.")
         super().destroy_node()
-    
-    # ----------------------------------------------------
+
+    # ----------------------------------------------------------
     # Timer Callback
-    # ----------------------------------------------------
+    # ----------------------------------------------------------
     def timer_callback(self):
         """Loop pengiriman data."""
         # Set sampling range dan output range (opsional, diatur sekali saat startup)
@@ -287,9 +290,10 @@ class Me31Modbus(Node):
         # self.read_data(data_type="float", slave_id=1, port="AI4")
 
 
+# main function
 def main(args=None):
     rclpy.init(args=args)
-    node = Me31Modbus()
+    node = Me31PyModbus()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

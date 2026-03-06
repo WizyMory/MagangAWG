@@ -27,6 +27,7 @@ setup(
     entry_points={
         'console_scripts': [
             'me31_node = me31_modbus.me31_node:main',
+            'me31_pymodbus_node = me31_modbus.me31_pymodbus_node:main',
         ],
     },
 )
