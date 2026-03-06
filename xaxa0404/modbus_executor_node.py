@@ -89,7 +89,8 @@ class ModbusExecutor(Node):
             self.client.unitidentifier = slave
             self.client.write_single_register(0x07EA, 0x5BB5)
 
-            self.publish_response(slave, 0x07EA, 1, "reboot_success")
+            # self.publish_response(slave, 0x07EA, 1, "reboot_success")
+            self.get_logger().info("Reeboot success")
 
         except Exception as e:
             self.get_logger().error(f"Reboot error: {e}")
@@ -103,7 +104,8 @@ class ModbusExecutor(Node):
             self.client.unitidentifier = slave
             self.client.write_single_register(0x07E9, 0x5BB5)
 
-            self.publish_response(slave, 0x07E9, 1, "restore_success")
+            # self.publish_response(slave, 0x07E9, 0x5BB5, "restore_success")
+            self.get_logger().info("Restore success")
 
         except Exception as e:
             self.get_logger().error(f"Restore error: {e}")
@@ -149,7 +151,7 @@ class ModbusExecutor(Node):
     # ==========================
     # CALLBACK
     # ==========================
-    def callback(self, msg):
+    def callback(self, msg = DataConnectivity()):
 
         try:
 
@@ -158,6 +160,7 @@ class ModbusExecutor(Node):
             # ======================
             if msg.mode == "connect":
                 self.connect(msg.port, msg.baudrate)
+                # self.set_output_range(msg.slave_id,msg.value)
                 return
 
             # ======================
@@ -177,18 +180,19 @@ class ModbusExecutor(Node):
             # READ
             # ======================
             if msg.mode == "read":
+                self.client.unitidentifier = msg.slave_id
 
                 if msg.function_code == 3:
 
                     result = self.client.read_holding_registers(
-                        msg.reg_address,
+                        msg.address,
                         msg.quantity
                     )
 
                 elif msg.function_code == 4:
 
                     result = self.client.read_input_registers(
-                        msg.reg_address,
+                        msg.address,
                         msg.quantity
                     )
 
@@ -202,7 +206,7 @@ class ModbusExecutor(Node):
 
                         self.publish_response(
                             msg.slave_id,
-                            msg.reg_address + i,
+                            msg.address + i,
                             val,
                             "read_result"
                         )
@@ -211,18 +215,19 @@ class ModbusExecutor(Node):
             # WRITE
             # ======================
             elif msg.mode == "write":
+                self.client.unitidentifier = msg.slave_id
 
                 if msg.function_code == 6:
 
                     self.client.write_single_register(
-                        msg.reg_address,
+                        msg.address,
                         msg.value
                     )
 
                 elif msg.function_code == 16:
 
                     self.client.write_multiple_registers(
-                        msg.reg_address,
+                        msg.address,
                         [msg.value]
                     )
 
@@ -232,7 +237,7 @@ class ModbusExecutor(Node):
 
                 self.publish_response(
                     msg.slave_id,
-                    msg.reg_address,
+                    msg.address,
                     msg.value,
                     "write_success"
                 )
@@ -243,6 +248,7 @@ class ModbusExecutor(Node):
             elif msg.mode == "reboot":
 
                 self.reboot_slave(msg.slave_id)
+                self.set_output_range(msg.slave_id,msg.value)
 
             # ======================
             # RESTORE
@@ -250,6 +256,7 @@ class ModbusExecutor(Node):
             elif msg.mode == "restore":
 
                 self.restore_factory_settings(msg.slave_id)
+                # self.set_output_range(msg.slave_id,msg.value)
 
             # ======================
             # SET INPUT
