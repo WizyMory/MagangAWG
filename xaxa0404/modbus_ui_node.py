@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
 
 from PyQt5.QtCore import QTimer
 
-from project_interfaces.msg import DataConnectivity
+from xaxa0404_msg.msg import DataConnectivity
 
 
 class UiNode(Node):
@@ -42,11 +42,11 @@ class UiNode(Node):
 
         # simpan data hasil read
         self.response_buffer.append(
-            (msg.reg_address, msg.value)
+            (msg.address, msg.value)
         )
 
         self.get_logger().info(
-            f"Response: addr={msg.reg_address} value={msg.value}"
+            f"Response: addr={msg.address} value={msg.value}"
         )
 
 
@@ -59,7 +59,7 @@ class ModbusUI(QWidget):
         self.node.ui = self
 
         self.setWindowTitle("Modbus UI Controller")
-        self.resize(750, 450)
+        self.resize(1000, 1000)
 
         layout = QVBoxLayout()
 
@@ -207,6 +207,8 @@ class ModbusUI(QWidget):
         msg = DataConnectivity()
         msg.port = self.port.text()
         msg.baudrate = int(self.baud.text())
+        msg.slave_id = int(self.slave.text())
+        # msg.value = int(self.value.text())
         msg.mode = "connect"
 
         self.node.publisher.publish(msg)
@@ -266,6 +268,7 @@ class ModbusUI(QWidget):
         msg.port = self.port.text()
         msg.baudrate = int(self.baud.text())
         msg.slave_id = int(self.slave.text())
+        msg.value = int(self.value.text())
         msg.mode = "reboot"
 
         self.node.publisher.publish(msg)
@@ -276,6 +279,7 @@ class ModbusUI(QWidget):
         msg.port = self.port.text()
         msg.baudrate = int(self.baud.text())
         msg.slave_id = int(self.slave.text())
+        # msg.value = int(self.value.text())
         msg.mode = "restore"
 
         self.node.publisher.publish(msg)
@@ -286,7 +290,7 @@ class ModbusUI(QWidget):
         msg.port = self.port.text()
         msg.baudrate = int(self.baud.text())
         msg.slave_id = int(self.slave.text())
-        msg.value = float(self.value.text())
+        msg.value = int(self.value.text())
         msg.mode = "set_input_range"
 
         self.node.publisher.publish(msg)
@@ -297,7 +301,7 @@ class ModbusUI(QWidget):
         msg.port = self.port.text()
         msg.baudrate = int(self.baud.text())
         msg.slave_id = int(self.slave.text())
-        msg.value = float(self.value.text())
+        msg.value = int(self.value.text())
         msg.mode = "set_output_range"
 
         self.node.publisher.publish(msg)
