@@ -11,8 +11,10 @@
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
   <depend>easymodbus==2.0.1</depend>
+  <depend>pymodbus==3.8.3</depend>
+  <depend>me31_msg</depend>
 
-  <exec_depend>me31_interfaces</exec_depend>
+  <!-- <exec_depend>me31_interfaces</exec_depend> -->
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

@@ -11,7 +11,9 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
-        ('share/' + package_name, ['package.xml'])
+        ('share/' + package_name, ['package.xml']),
+
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -26,8 +28,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'me31_node = me31_modbus.me31_node:main',
-            'me31_pymodbus_node = me31_modbus.me31_pymodbus_node:main',
+            'modbus_node = me31_modbus.me31_pymodbus_node:main',
+            'ui_node = me31_modbus.ui_node:main',
         ],
     },
 )
