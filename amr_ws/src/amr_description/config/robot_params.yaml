@@ -1,0 +1,13 @@
+amr_description:
+  ros__parameters:
+    base_length: 0.65
+    base_width: 0.45
+    base_height: 0.08
+
+    wheel_radius: 0.065
+    wheel_width: 0.05
+    wheel_separation: 0.3118
+
+    laser_x: 0.26
+    laser_y: 0.160
+    laser_z: 0.160

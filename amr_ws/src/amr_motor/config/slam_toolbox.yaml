@@ -1,0 +1,46 @@
+slam_toolbox:
+  ros__parameters:
+
+    # =====================
+    # Frames
+    # =====================
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_link
+
+    # =====================
+    # Topics
+    # =====================
+    scan_topic: /scan
+
+    # =====================
+    # Mode
+    # =====================
+    mode: mapping
+
+    # =====================
+    # Timing & TF
+    # =====================
+    use_sim_time: false
+    transform_timeout: 0.5
+    tf_buffer_duration: 30.0
+
+    # =====================
+    # Scan handling
+    # =====================
+    throttle_scans: 2          # ⬅️ penting untuk queue full
+    scan_queue_size: 10
+    min_pass_through: 1
+    scan_buffer_maximum_scan_distance: 30.0
+
+    # =====================
+    # Publish & matching
+    # =====================
+    publish_tf: true
+    use_scan_matching: true
+
+    # =====================
+    # Motion model
+    # =====================
+    minimum_travel_distance: 0.05
+    minimum_travel_heading: 0.05

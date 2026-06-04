@@ -1,0 +1,29 @@
+time,mode,action,result
+2026-05-08T09:37:13.695238,velocity,start L=50 R=50,OK
+2026-05-08T09:37:18.572874,velocity,stop,OK
+2026-05-08T09:37:22.568350,velocity,reset_data,OK
+2026-05-08T09:38:14.765776,position,start relative async L=1000 R=1000,OK
+2026-05-08T09:38:24.365088,position,start relative async L=1000 R=1000,OK
+2026-05-08T09:38:32.872956,position,start relative async L=1000 R=1000,OK
+2026-05-08T09:38:35.226812,position,stop,OK
+2026-05-08T09:38:39.375373,position,start relative async L=1000 R=1000,OK
+2026-05-08T09:38:44.866352,position,emergency_stop,OK
+2026-05-08T09:38:49.909244,position,clear_error,OK
+2026-05-08T09:38:55.613309,position,stop,OK
+2026-05-08T09:39:00.727106,position,clear_error,OK
+2026-05-08T09:39:06.818364,position,start relative async L=1000 R=1000,OK
+2026-05-08T09:39:09.639384,position,stop,OK
+2026-05-08T09:39:18.995210,position,reset_data,OK
+2026-05-08T09:39:36.555677,velocity,start L=50 R=50,OK
+2026-05-08T09:39:39.766740,velocity,emergency_stop,OK
+2026-05-08T09:39:42.954146,velocity,clear_error,OK
+2026-05-08T09:39:53.696005,velocity,start L=50 R=50,OK
+2026-05-08T09:39:56.646428,velocity,stop,OK
+2026-05-08T09:40:09.614600,velocity,reset_data,OK
+2026-05-08T09:45:16.684861,velocity,start L=50 R=50,OK
+2026-05-08T09:45:38.059886,velocity,stop,OK
+2026-05-08T09:46:48.740030,velocity,start L=50 R=50,OK
+2026-05-08T09:47:01.998073,velocity,stop,OK
+2026-05-08T09:47:41.046422,position,start relative sync L=50 R=0,OK
+2026-05-08T09:47:43.775625,position,stop,OK
+2026-05-08T10:00:46.598491,position,reset_data,OK

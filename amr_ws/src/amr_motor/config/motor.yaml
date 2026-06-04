@@ -1,0 +1,12 @@
+amr_motor:
+  ros__parameters:
+    port: /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_B0002T4J-if00-port0
+    baudrate: 115200
+    slave_id: 1
+
+    wheel_radius: 0.065          # diameter 130 mm
+    wheel_base: 0.3118     # 311.80 mm
+
+    battery_nominal_voltage: 24.0
+    battery_warn_voltage: 22.0
+    battery_critical_voltage: 20.0

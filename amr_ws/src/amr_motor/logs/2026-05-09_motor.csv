@@ -1,0 +1,19 @@
+time,mode,action,result
+2026-05-09T09:36:45.082173,velocity,start L=50 R=50,OK
+2026-05-09T09:36:52.801484,velocity,stop,OK
+2026-05-09T09:36:58.567214,velocity,reset_data,OK
+2026-05-09T09:37:33.452996,position,start relative sync L=4096 R=4096,OK
+2026-05-09T09:37:46.574424,position,stop,OK
+2026-05-09T10:00:40.225628,velocity,reset_data,OK
+2026-05-09T10:00:44.349793,position,start relative sync L=4096 R=4096,OK
+2026-05-09T10:00:58.224101,position,stop,OK
+2026-05-09T10:01:04.117008,position,reset_data,OK
+2026-05-09T10:01:07.377954,position,start relative sync L=4096 R=4096,OK
+2026-05-09T10:01:14.133079,position,reset_data,OK
+2026-05-09T10:01:16.095051,position,stop,OK
+2026-05-09T10:01:44.897590,torque,start L=25 R=25 mA,OK
+2026-05-09T10:01:58.140996,torque,stop,OK
+2026-05-09T10:02:27.791725,torque,start L=100 R=100 mA,OK
+2026-05-09T10:02:50.220778,torque,stop,OK
+2026-05-09T10:03:04.694098,torque,start L=500 R=500 mA,OK
+2026-05-09T10:03:08.125492,torque,stop,OK

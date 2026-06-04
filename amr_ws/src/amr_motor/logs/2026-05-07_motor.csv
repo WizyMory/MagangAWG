@@ -1,0 +1,51 @@
+time,mode,action,result
+2026-05-07T09:51:03.773336,velocity,clear_error,OK
+2026-05-07T09:51:47.264632,velocity,start L=50 R=50,OK
+2026-05-07T09:52:09.397751,velocity,stop,OK
+2026-05-07T09:52:28.885526,velocity,clear_error,OK
+2026-05-07T09:54:12.624749,position,start relative sync L=100 R=100,OK
+2026-05-07T09:54:49.477850,position,start relative sync L=100 R=100,OK
+2026-05-07T09:54:58.911865,position,clear_error,OK
+2026-05-07T09:55:11.118642,position,clear_error,OK
+2026-05-07T09:55:16.879298,position,clear_error,OK
+2026-05-07T09:56:12.888229,velocity,start L=0 R=0,OK
+2026-05-07T09:56:18.769344,velocity,stop,OK
+2026-05-07T10:56:45.850564,velocity,start L=50 R=50,OK
+2026-05-07T10:56:53.688733,velocity,stop,OK
+2026-05-07T10:56:55.725244,velocity,start L=50 R=50,OK
+2026-05-07T10:56:59.674236,velocity,stop,OK
+2026-05-07T10:57:02.888219,velocity,start L=50 R=50,OK
+2026-05-07T10:57:06.149945,velocity,stop,OK
+2026-05-07T10:57:09.651417,velocity,start L=50 R=50,OK
+2026-05-07T10:57:13.498547,velocity,stop,OK
+2026-05-07T10:57:55.238546,position,start absolute sync L=2000 R=2000,OK
+2026-05-07T10:58:06.661324,position,stop,OK
+2026-05-07T10:58:26.870034,velocity,start L=50 R=50,OK
+2026-05-07T10:58:30.207105,velocity,stop,OK
+2026-05-07T10:58:43.572818,velocity,start L=50 R=50,OK
+2026-05-07T10:58:47.654075,velocity,stop,OK
+2026-05-07T10:59:41.667912,velocity,start L=100 R=100,OK
+2026-05-07T10:59:44.023060,velocity,stop,OK
+2026-05-07T11:44:20.844393,velocity,clear_error,OK
+2026-05-07T12:14:28.087114,velocity,reset_data,OK
+2026-05-07T12:15:08.502992,velocity,reset_data,OK
+2026-05-07T12:15:30.267161,velocity,start L=50 R=50,OK
+2026-05-07T12:15:40.144297,velocity,stop,OK
+2026-05-07T12:15:43.244581,velocity,reset_data,OK
+2026-05-07T12:15:46.058103,velocity,reset_data,OK
+2026-05-07T12:15:46.144241,velocity,reset_data,OK
+2026-05-07T12:15:46.403654,velocity,reset_data,OK
+2026-05-07T12:15:47.649325,velocity,reset_data,OK
+2026-05-07T12:15:48.524563,velocity,reset_data,OK
+2026-05-07T12:17:03.234648,velocity,reset_data,OK
+2026-05-07T12:18:29.119167,position,start relative sync L=2000 R=2000,OK
+2026-05-07T12:18:31.567008,position,start relative sync L=2000 R=2000,OK
+2026-05-07T12:18:34.237000,position,stop,OK
+2026-05-07T12:18:44.151303,position,clear_error,OK
+2026-05-07T12:18:46.386883,position,start relative sync L=2000 R=2000,OK
+2026-05-07T12:18:50.135519,position,stop,OK
+2026-05-07T12:18:56.344708,velocity,start L=50 R=50,OK
+2026-05-07T12:18:59.516999,velocity,start L=50 R=50,OK
+2026-05-07T12:19:01.481303,velocity,stop,OK
+2026-05-07T12:19:10.625441,velocity,start L=-50 R=50,OK
+2026-05-07T12:19:14.554164,velocity,stop,OK
