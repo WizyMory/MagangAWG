@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AMR Navigation Interface</title>
+  <style>
+    :root {
+      --bg: #eef1f5;
+      --panel: #ffffff;
+      --ink: #101827;
+      --muted: #5b6472;
+      --line: #d6dde7;
+      --yellow: #ffc700;
+      --yellow-shadow: #c99a00;
+      --green: #22c55e;
+      --red: #ef4444;
+      --blue: #2563eb;
+      --canvas: #1f2937;
+      --font: Arial, Helvetica, sans-serif;
+      --mono: "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      padding: 22px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font);
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    h1 { font-size: 1.75rem; line-height: 1.1; }
+
+    .subtitle {
+      margin-top: 5px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 38px;
+      padding: 9px 14px;
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 3px 0 var(--line);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--red);
+    }
+
+    .status-pill.ok .dot {
+      background: var(--green);
+      animation: pulse 1.6s infinite;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 292px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .map-panel {
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: 0 5px 0 var(--line);
+    }
+
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      min-height: 420px;
+      height: calc(100vh - 150px);
+      border: 2px solid #c5ccd7;
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--canvas);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    .side {
+      display: grid;
+      gap: 13px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button {
+      min-height: 42px;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-family: var(--font);
+      font-weight: 900;
+      color: var(--ink);
+      background: var(--panel);
+      box-shadow: 0 3px 0 var(--line);
+      cursor: pointer;
+    }
+
+    button.active {
+      background: var(--yellow);
+      box-shadow: 0 3px 0 var(--yellow-shadow);
+    }
+
+    button.danger {
+      grid-column: 1 / -1;
+      color: #ffffff;
+      background: var(--red);
+      box-shadow: 0 3px 0 #b91c1c;
+    }
+
+    button:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
+
+    .metric {
+      padding: 15px;
+      border-radius: 8px;
+      background: var(--yellow);
+      box-shadow: 0 4px 0 var(--yellow-shadow);
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: .76rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      margin-top: 5px;
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .45); }
+      50% { box-shadow: 0 0 0 7px rgba(34, 197, 94, 0); }
+    }
+
+    @media (max-width: 900px) {
+      body { padding: 15px; }
+      header { align-items: flex-start; flex-direction: column; }
+      .layout { grid-template-columns: 1fr; }
+      .canvas-wrap { height: 62vh; min-height: 330px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>AMR Navigation Interface</h1>
+      <div class="subtitle">Point to Point</div>
+    </div>
+    <div class="status-pill" id="robotPill">
+      <span class="dot"></span>
+      <span id="robotText">Robot disconnected</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main class="map-panel">
+      <div class="canvas-wrap">
+        <canvas id="mapCanvas"></canvas>
+      </div>
+    </main>
+
+    <aside class="side">
+      <div class="toolbar">
+        <button id="initialBtn" class="active" onclick="setMode('initial')">Initial Pose</button>
+        <button id="goalBtn" onclick="setMode('goal')">Goal Pose</button>
+        <button class="danger" onclick="cancelGoal()">Cancel Goal</button>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Mode</div>
+        <div class="metric-value" id="modeValue">Initial Pose</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Goal Status</div>
+        <div class="metric-value" id="goalStatus">idle</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Robot Pose</div>
+        <div class="metric-value" id="robotPose">-</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Goal Pose</div>
+        <div class="metric-value" id="goalPose">-</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Distance</div>
+        <div class="metric-value" id="distance">0.00 m</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Map</div>
+        <div class="metric-value" id="mapInfo">loading</div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let mapData = null;
+    let mapImage = null;
+    let state = {};
+    let mode = 'initial';
+    let transform = { scale: 1, ox: 0, oy: 0, width: 0, height: 0 };
+    let dragStart = null;
+    let dragEnd = null;
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(rect.width * ratio);
+      canvas.height = Math.floor(rect.height * ratio);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      return rect;
+    }
+
+    function setMode(nextMode) {
+      mode = nextMode;
+      document.getElementById('initialBtn').classList.toggle('active', mode === 'initial');
+      document.getElementById('goalBtn').classList.toggle('active', mode === 'goal');
+      document.getElementById('modeValue').textContent =
+        mode === 'initial' ? 'Initial Pose' : 'Goal Pose';
+    }
+
+    function createMapImage() {
+      if (!mapData || !mapData.width || !mapData.height) return;
+
+      const offscreen = document.createElement('canvas');
+      offscreen.width = mapData.width;
+      offscreen.height = mapData.height;
+      const imageCtx = offscreen.getContext('2d');
+      const image = imageCtx.createImageData(mapData.width, mapData.height);
+
+      for (let y = 0; y < mapData.height; y++) {
+        for (let x = 0; x < mapData.width; x++) {
+          const srcIndex = x + (mapData.height - 1 - y) * mapData.width;
+          const value = mapData.data[srcIndex];
+          const dstIndex = (x + y * mapData.width) * 4;
+          let shade = 205;
+          if (value === 0) shade = 248;
+          if (value > 50) shade = 35;
+          image.data[dstIndex] = shade;
+          image.data[dstIndex + 1] = shade;
+          image.data[dstIndex + 2] = shade;
+          image.data[dstIndex + 3] = 255;
+        }
+      }
+
+      imageCtx.putImageData(image, 0, 0);
+      mapImage = offscreen;
+    }
+
+    function computeTransform(rect) {
+      if (!mapData || !mapData.width || !mapData.height) return;
+      const scale = Math.min(rect.width / mapData.width, rect.height / mapData.height) * 0.96;
+      transform = {
+        scale,
+        ox: (rect.width - mapData.width * scale) / 2,
+        oy: (rect.height - mapData.height * scale) / 2,
+        width: rect.width,
+        height: rect.height,
+      };
+    }
+
+    function worldToCanvas(point) {
+      const res = mapData.resolution;
+      const origin = mapData.origin || { x: 0, y: 0 };
+      const gx = (point.x - origin.x) / res;
+      const gy = (point.y - origin.y) / res;
+      return {
+        x: transform.ox + gx * transform.scale,
+        y: transform.oy + (mapData.height - gy) * transform.scale,
+      };
+    }
+
+    function canvasToWorld(px, py) {
+      const res = mapData.resolution;
+      const origin = mapData.origin || { x: 0, y: 0 };
+      const gx = (px - transform.ox) / transform.scale;
+      const gy = mapData.height - ((py - transform.oy) / transform.scale);
+      return {
+        x: origin.x + gx * res,
+        y: origin.y + gy * res,
+      };
+    }
+
+    function drawArrow(pose, color, size) {
+      if (!pose || !mapData) return;
+      const p = worldToCanvas(pose);
+      const yaw = pose.yaw || 0;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(-yaw);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(size, 0);
+      ctx.lineTo(-size * 0.7, -size * 0.55);
+      ctx.lineTo(-size * 0.45, 0);
+      ctx.lineTo(-size * 0.7, size * 0.55);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawPath(path, color, width) {
+      if (!path || path.length < 2 || !mapData) return;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      path.forEach((point, index) => {
+        const p = worldToCanvas(point);
+        if (index === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.stroke();
+    }
+
+    function drawPreview() {
+      if (!dragStart || !dragEnd) return;
+      const start = worldToCanvas(dragStart);
+      const end = worldToCanvas(dragEnd);
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke();
+    }
+
+    function draw() {
+      const rect = resizeCanvas();
+      ctx.fillStyle = '#1f2937';
+      ctx.fillRect(0, 0, rect.width, rect.height);
+
+      if (!mapData || !mapImage) return;
+
+      computeTransform(rect);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(
+        mapImage,
+        transform.ox,
+        transform.oy,
+        mapData.width * transform.scale,
+        mapData.height * transform.scale
+      );
+
+      drawPath(state.path, '#2563eb', 3);
+      drawArrow(state.initial_pose, '#f59e0b', 10);
+      drawArrow(state.goal_pose, '#ef4444', 12);
+      drawArrow(state.robot_pose, '#22c55e', 13);
+      drawPreview();
+    }
+
+    function canvasPoint(event) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+      };
+    }
+
+    canvas.addEventListener('pointerdown', event => {
+      if (!mapData) return;
+      const p = canvasPoint(event);
+      dragStart = canvasToWorld(p.x, p.y);
+      dragEnd = dragStart;
+      draw();
+    });
+
+    canvas.addEventListener('pointermove', event => {
+      if (!dragStart || !mapData) return;
+      const p = canvasPoint(event);
+      dragEnd = canvasToWorld(p.x, p.y);
+      draw();
+    });
+
+    canvas.addEventListener('pointerup', async event => {
+      if (!dragStart || !mapData) return;
+      const p = canvasPoint(event);
+      dragEnd = canvasToWorld(p.x, p.y);
+
+      const dx = dragEnd.x - dragStart.x;
+      const dy = dragEnd.y - dragStart.y;
+      const yaw = Math.hypot(dx, dy) > 0.03 ? Math.atan2(dy, dx) : 0.0;
+      const payload = { x: dragStart.x, y: dragStart.y, yaw };
+      dragStart = null;
+      dragEnd = null;
+
+      if (mode === 'initial') {
+        await postJson('/api/nav/initial_pose', payload);
+      } else {
+        await postJson('/api/nav/goal', payload);
+      }
+      await fetchState();
+    });
+
+    async function postJson(url, payload) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      return res.json();
+    }
+
+    async function cancelGoal() {
+      await fetch('/api/nav/cancel', { method: 'POST' });
+      await fetchState();
+    }
+
+    function formatPose(pose) {
+      if (!pose) return '-';
+      const deg = (pose.yaw || 0) * 180 / Math.PI;
+      return `${pose.x.toFixed(2)}, ${pose.y.toFixed(2)}, ${deg.toFixed(0)} deg`;
+    }
+
+    function updateMetrics() {
+      const pill = document.getElementById('robotPill');
+      const connected = Boolean(state.robot_connected);
+      pill.className = `status-pill ${connected ? 'ok' : ''}`;
+      document.getElementById('robotText').textContent =
+        connected ? 'Robot connected' : 'Robot disconnected';
+      document.getElementById('goalStatus').textContent = state.goal_status || 'idle';
+      document.getElementById('robotPose').textContent = formatPose(state.robot_pose);
+      document.getElementById('goalPose').textContent = formatPose(state.goal_pose);
+      const distance = state.feedback ? Number(state.feedback.distance_remaining || 0) : 0;
+      document.getElementById('distance').textContent = `${distance.toFixed(2)} m`;
+      document.getElementById('mapInfo').textContent = mapData
+        ? `${mapData.width} x ${mapData.height}`
+        : 'loading';
+    }
+
+    async function fetchMap() {
+      const res = await fetch('/api/nav/map');
+      const data = await res.json();
+      if (data.width && data.height) {
+        mapData = data;
+        createMapImage();
+        updateMetrics();
+        draw();
+      }
+    }
+
+    async function fetchState() {
+      const res = await fetch('/api/nav/state');
+      state = await res.json();
+      updateMetrics();
+      draw();
+      if (!mapData && state.map_ready) fetchMap();
+    }
+
+    window.addEventListener('resize', draw);
+    fetchMap();
+    fetchState();
+    setInterval(fetchState, 300);
+    setInterval(fetchMap, 5000);
+  </script>
+</body>
+</html>
