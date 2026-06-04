@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AMR 25 – Status Module</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── LAYOUT ── */
+    .main-layout {
+      display: flex;
+      gap: 28px;
+      align-items: flex-start;
+    }
+
+    /* ── YELLOW PANEL ── */
+    .panel {
+      background: var(--yellow);
+      border-radius: var(--radius-card);
+      padding: 22px;
+      flex: 1;
+      box-shadow: var(--shadow-card);
+      animation: fade-in-up .4s ease both;
+    }
+
+    .module-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    /* ── MODULE CARD ── */
+    .mod-card {
+      border-radius: 13px;
+      padding: 18px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform .12s, box-shadow .12s, filter .2s;
+      position: relative;
+      animation: fade-in-up .4s ease both;
+    }
+
+    .mod-card:hover  { transform: translateY(-3px); filter: brightness(1.06); }
+    .mod-card:active { transform: translateY(2px); }
+
+    .mod-card.connected    { background: var(--green-light); box-shadow: 0 5px 0 var(--green-shadow); }
+    .mod-card.disconnected { background: var(--red-light);   box-shadow: 0 5px 0 var(--red-shadow); }
+    .mod-card.unknown      { background: #9CA3AF;             box-shadow: 0 5px 0 #6B7280; cursor: default; }
+
+    .mod-card.large { padding: 22px 16px; }
+
+    .mod-label {
+      color: var(--white);
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: .01em;
+    }
+    .mod-card.large .mod-label { font-size: 1.45rem; font-weight: 900; }
+
+    /* status dot */
+    .mod-dot {
+      position: absolute;
+      top: 10px; right: 12px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.55);
+    }
+    .mod-card.connected .mod-dot {
+      background: #fff;
+      animation: pulse-green 1.8s infinite;
+    }
+
+    /* stagger delays */
+    .mod-card:nth-child(1) { animation-delay: .05s; }
+    .mod-card:nth-child(2) { animation-delay: .10s; }
+    .mod-card:nth-child(3) { animation-delay: .15s; }
+    .mod-card:nth-child(4) { animation-delay: .20s; }
+    .mod-card:nth-child(5) { animation-delay: .25s; }
+    .mod-card:nth-child(6) { animation-delay: .30s; }
+    .mod-card:nth-child(7) { animation-delay: .35s; }
+    .mod-card:nth-child(8) { animation-delay: .40s; }
+
+    /* ── LEGEND + REFRESH ── */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 230px;
+      animation: fade-in-up .5s ease .1s both;
+    }
+
+    .legend-card {
+      background: var(--yellow);
+      border-radius: var(--radius-card);
+      padding: 20px 24px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .legend-title {
+      font-size: 1.15rem;
+      font-weight: 900;
+      margin-bottom: 16px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .legend-dot {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .legend-dot.green { background: var(--green-light); }
+    .legend-dot.red   { background: var(--red-light); }
+    .legend-dot.gray  { background: #9CA3AF; }
+
+    .legend-label { font-size: .95rem; font-weight: 800; }
+
+    /* refresh indicator */
+    .refresh-info {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--text-mid);
+      box-shadow: 0 3px 0 #ddd;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .refresh-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--green-light);
+      animation: pulse-green 1.5s infinite;
+    }
+
+    .last-update {
+      margin-top: 4px;
+      font-size: .78rem;
+      color: var(--text-light);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-brand">
+      <svg class="logo-svg" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="30,3 57,51 3,51" fill="none" stroke="var(--blue-logo)" stroke-width="4.5" stroke-linejoin="round"/>
+        <polygon points="30,15 49,47 11,47" fill="var(--blue-logo)" opacity=".15"/>
+        <line x1="19" y1="35" x2="41" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="30" y1="17" x2="19" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="30" y1="17" x2="41" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+      </svg>
+      <div class="brand-text">
+        <div class="company">PT. Adhikara Wiyasa Gani</div>
+        <div class="subtitle">Status Module</div>
+      </div>
+    </div>
+    <div class="header-amr">AMR 25<br>Teknisi Kontrol</div>
+  </header>
+
+  <!-- MAIN -->
+  <div class="main-layout">
+    <div class="panel">
+      <div class="module-grid" id="moduleGrid">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div class="legend-card">
+        <div class="legend-title">Module Status</div>
+        <div class="legend-item">
+          <div class="legend-dot green"></div>
+          <span class="legend-label">Connected</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot red"></div>
+          <span class="legend-label">Disconnected</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot gray"></div>
+          <span class="legend-label">Unknown</span>
+        </div>
+      </div>
+
+      <div class="refresh-info">
+        <div class="refresh-dot"></div>
+        <div>
+          <div>Auto-refresh tiap 3 detik</div>
+          <div class="last-update" id="lastUpdate">Memuat…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────
+    // CONFIG – sesuaikan BASE_URL dengan IP FastAPI
+    // ─────────────────────────────────────────────
+    const API = {
+      BASE_URL: '',
+      MODULE_STATUS: '/api/module_status',
+    };
+
+    // ─────────────────────────────────────────────
+    // MODULE DEFINITIONS
+    // key   → dicocokkan dengan key dari API response
+    // label → teks yang ditampilkan
+    // route → halaman kontrol (jika ada)
+    // size  → 'large' untuk baris pertama
+    // ─────────────────────────────────────────────
+    const MODULES = [
+      { key: 'modbus_rtu_relay',      label: 'Modbus RTU Relay',      route: 'relay.html',    size: 'large'  },
+      { key: 'lidar',                 label: 'Lidar',                  route: null,             size: 'large'  },
+      { key: 'front_magnetic_sensor', label: 'Front Magnetic Sensor',  route: 'magnetic.html', size: 'normal' },
+      { key: 'bldc_motor_driver',     label: 'BLDC Motor Driver',      route: 'bldc.html',     size: 'normal' },
+      { key: 'rear_magnetic_sensor',  label: '....',                   route: null,             size: 'normal' },
+      { key: 'imu_sensor',            label: '....',                   route: null,             size: 'normal' },
+      { key: 'camera_module',         label: '....',                   route: null,             size: 'normal' },
+      { key: 'emergency_stop',        label: '....',                   route: null,             size: 'normal' },
+    ];
+
+    // ─────────────────────────────────────────────
+    // RENDER
+    // ─────────────────────────────────────────────
+    function renderModules(statuses) {
+      const grid = document.getElementById('moduleGrid');
+      grid.innerHTML = '';
+
+      MODULES.forEach(mod => {
+        const status = statuses[mod.key] ?? 'unknown'; // 'connected' | 'disconnected' | 'unknown'
+        const card = document.createElement('div');
+        card.className = `mod-card ${mod.size} ${status}`;
+
+        card.innerHTML = `
+          <div class="mod-dot"></div>
+          <span class="mod-label">${mod.label}</span>
+        `;
+
+        if (mod.route && status !== 'unknown') {
+          card.title = `Buka kontrol ${mod.label}`;
+          card.addEventListener('click', () => window.location.href = mod.route);
+        }
+
+        grid.appendChild(card);
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    // FETCH STATUS FROM FASTAPI
+    // Expected response shape:
+    // {
+    //   "modbus_rtu_relay": "connected" | "disconnected",
+    //   "lidar": "connected",
+    //   ...
+    // }
+    // ─────────────────────────────────────────────
+    async function fetchStatus() {
+      try {
+        const res  = await fetch(API.BASE_URL + API.MODULE_STATUS);
+        const data = await res.json();
+        renderModules(data);
+
+        const now = new Date();
+        document.getElementById('lastUpdate').textContent =
+          'Update: ' + now.toLocaleTimeString('id-ID');
+      } catch (err) {
+        console.error('Gagal fetch status:', err);
+        // Tampilkan semua unknown saat API tidak terjangkau
+        const fallback = {};
+        MODULES.forEach(m => fallback[m.key] = 'unknown');
+        renderModules(fallback);
+        document.getElementById('lastUpdate').textContent = 'API tidak terjangkau';
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────────
+    fetchStatus();
+    setInterval(fetchStatus, 3000);
+  </script>
+</body>
+</html>

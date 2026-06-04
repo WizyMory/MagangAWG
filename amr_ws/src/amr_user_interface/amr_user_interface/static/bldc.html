@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AMR – Motor Driver</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@400;600;700&display=swap');
+
+  :root {
+    --bg:       #1a1a0e;
+    --panel:    #252510;
+    --panel2:   #2e2e14;
+    --border:   #4a4a1e;
+    --accent:   #c8a800;
+    --accent2:  #e6c200;
+    --green:    #22c55e;
+    --red:      #ef4444;
+    --orange:   #f97316;
+    --blue:     #3b82f6;
+    --text:     #e8e0b0;
+    --muted:    #888860;
+    --input-bg: #1a1a0a;
+    --shadow:   0 2px 12px rgba(200,168,0,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Rajdhani', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .brand { display: flex; align-items: baseline; gap: 8px; }
+  .brand-amr { font-size: 1.6rem; font-weight: 700; color: var(--accent2); letter-spacing: 2px; }
+  .brand-sub { font-size: 0.85rem; color: var(--muted); letter-spacing: 1px; }
+  .brand-right { font-size: 1.1rem; font-weight: 600; color: var(--text); letter-spacing: 1px; }
+
+  .conn-badge {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    transition: all 0.3s;
+  }
+  .conn-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted);
+    animation: none;
+  }
+  .conn-badge.connected { border-color: var(--green); color: var(--green); }
+  .conn-badge.connected .conn-dot { background: var(--green); animation: pulse 2s infinite; }
+  .conn-badge.disconnected { border-color: var(--red); color: var(--red); }
+  .conn-badge.disconnected .conn-dot { background: var(--red); }
+
+  @keyframes pulse {
+    0%,100% { opacity:1; } 50% { opacity:0.4; }
+  }
+
+  /* ── LAYOUT ── */
+  .page { padding: 16px 20px; }
+
+  .grid-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .grid-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.1fr;
+    gap: 14px;
+  }
+
+  /* ── PANEL ── */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--panel2);
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+  }
+  .panel-title {
+    font-size: 0.9rem; font-weight: 700;
+    color: var(--accent2); letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .panel-body { padding: 14px; }
+
+  /* ── FORM ROWS ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label {
+    font-size: 0.7rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .form-group input {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    padding: 6px 10px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus { border-color: var(--accent); }
+  .form-group input::placeholder { color: #555540; }
+
+  /* ── ACTUAL DISPLAY ── */
+  .actual-row {
+    display: flex; gap: 10px; margin-bottom: 12px;
+  }
+  .actual-box {
+    flex: 1;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 10px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .actual-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.0rem; font-weight: 700;
+    color: var(--accent2);
+  }
+  .actual-label {
+    font-size: 0.65rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.8px;
+  }
+
+  /* ── BUTTONS ── */
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    padding: 7px 16px;
+    border-radius: 5px;
+    border: none;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.85rem; font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-start  { background: var(--green); color: #fff; }
+  .btn-stop   { background: var(--red); color: #fff; }
+  .btn-estop  { background: #111; border: 1px solid var(--red); color: var(--red); font-size: 0.75rem; padding: 6px 10px; }
+  .btn-clear  { background: #111; border: 1px solid var(--blue); color: var(--blue); font-size: 0.75rem; padding: 6px 10px; }
+  .btn-reset  { background: var(--blue); color: #fff; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-start:hover  { background: #16a34a; }
+  .btn-stop:hover   { background: #dc2626; }
+  .btn-estop:hover  { border-color: #ff6666; color: #ff6666; background: #1a0000; }
+  .btn-clear:hover  { border-color: #60a5fa; color: #60a5fa; }
+  .btn-reset:hover  { background: #2563eb; }
+
+  /* ── RADIO TOGGLES ── */
+  .toggle-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .radio-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 0.75rem; font-weight: 600;
+    cursor: pointer;
+    color: var(--muted);
+    background: var(--input-bg);
+    transition: all 0.15s;
+    font-family: 'Rajdhani', sans-serif;
+    letter-spacing: 0.5px;
+    user-select: none;
+  }
+  .radio-btn.active {
+    border-color: var(--accent);
+    color: var(--accent2);
+    background: rgba(200,168,0,0.12);
+  }
+
+  /* ── STATUS PANEL ── */
+  .status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .status-item {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .status-item.full { grid-column: 1 / -1; }
+  .status-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem; font-weight: 700;
+    color: var(--accent2);
+  }
+  .status-label {
+    font-size: 0.65rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.8px;
+  }
+
+  .mode-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .mode-velocity { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid var(--green); }
+  .mode-position { background: rgba(59,130,246,0.15); color: var(--blue); border: 1px solid var(--blue); }
+  .mode-torque   { background: rgba(249,115,22,0.15); color: var(--orange); border: 1px solid var(--orange); }
+  .mode-stopped  { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid var(--red); }
+  .mode-unknown  { background: rgba(136,136,96,0.12); color: var(--muted); border: 1px solid var(--border); }
+
+  .temp-warn { color: var(--orange) !important; }
+  .temp-crit { color: var(--red) !important; }
+  .err-ok    { color: var(--green) !important; }
+  .err-fault { color: var(--red) !important; }
+
+  /* ── LOGGER PANEL ── */
+  .logger-box {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    height: 220px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    padding: 8px;
+  }
+  .logger-box::-webkit-scrollbar { width: 4px; }
+  .logger-box::-webkit-scrollbar-track { background: var(--panel2); }
+  .logger-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-entry {
+    display: flex; gap: 8px;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(74,74,30,0.3);
+    line-height: 1.4;
+  }
+  .log-ts   { color: var(--muted); flex-shrink: 0; font-size: 0.68rem; }
+  .log-tag  { flex-shrink: 0; }
+  .log-msg  { color: var(--text); word-break: break-all; }
+  .tag-vel  { color: var(--green); }
+  .tag-pos  { color: var(--blue); }
+  .tag-tq   { color: var(--orange); }
+  .tag-sys  { color: var(--accent); }
+  .tag-err  { color: var(--red); }
+  .tag-ok   { color: var(--green); }
+
+  .logger-footer {
+    display: flex; justify-content: flex-end; margin-top: 6px;
+  }
+  .btn-detail {
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    transition: all 0.15s;
+  }
+  .btn-detail:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── ACK TOAST ── */
+  #ack-toast {
+    position: fixed; bottom: 20px; right: 20px; z-index: 999;
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+    max-width: 320px;
+  }
+  #ack-toast.show { opacity: 1; }
+  #ack-toast.ok   { border-color: var(--green); color: var(--green); }
+  #ack-toast.err  { border-color: var(--red);   color: var(--red); }
+
+  /* ── DIVIDER ── */
+  .form-divider {
+    grid-column: 1 / -1;
+    height: 1px;
+    background: var(--border);
+    margin: 2px 0;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .grid-top, .grid-bottom { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="brand">
+    <span class="brand-amr">AMR</span>
+    <span class="brand-sub">Teknisi Kontrol</span>
+  </div>
+  <span class="brand-right">Motor Driver</span>
+  <div id="conn-badge" class="conn-badge disconnected">
+    <span class="conn-dot"></span>
+    <span id="conn-text">DISCONNECTED</span>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- ROW 1: Velocity | Position -->
+  <div class="grid-top">
+
+    <!-- VELOCITY MODE -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-dot"></span>
+        <span class="panel-title">Velocity Mode</span>
+      </div>
+      <div class="panel-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>ACC (LEFT) – 0~32767 ms</label>
+            <input id="v_acc_l" type="number" value="500" min="0" max="32767" placeholder="0~32767"/>
+          </div>
+          <div class="form-group">
+            <label>ACC (RIGHT) – 0~32767 ms</label>
+            <input id="v_acc_r" type="number" value="500" min="0" max="32767" placeholder="0~32767"/>
+          </div>
+          <div class="form-group">
+            <label>DCC (LEFT) – 0~32767 ms</label>
+            <input id="v_dcc_l" type="number" value="500" min="0" max="32767" placeholder="0~32767"/>
+          </div>
+          <div class="form-group">
+            <label>DCC (RIGHT) – 0~32767 ms</label>
+            <input id="v_dcc_r" type="number" value="500" min="0" max="32767" placeholder="0~32767"/>
+          </div>
+          <div class="form-group">
+            <label>Target Velocity LEFT – r/min</label>
+            <input id="v_tgt_l" type="number" value="0" min="-3000" max="3000" placeholder="-3000~3000"/>
+          </div>
+          <div class="form-group">
+            <label>Target Velocity RIGHT – r/min</label>
+            <input id="v_tgt_r" type="number" value="0" min="-3000" max="3000" placeholder="-3000~3000"/>
+          </div>
+        </div>
+        <div class="actual-row">
+          <div class="actual-box">
+            <span class="actual-val" id="v_actual_l">—</span>
+            <span class="actual-label">Actual Velocity LEFT (0.1 r/min)</span>
+          </div>
+          <div class="actual-box">
+            <span class="actual-val" id="v_actual_r">—</span>
+            <span class="actual-label">Actual Velocity RIGHT (0.1 r/min)</span>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-start" onclick="velocityStart()">START</button>
+          <button class="btn btn-stop"  onclick="motorStop()">STOP</button>
+          <button class="btn btn-estop" onclick="emergencyStop()">Emergency Stop</button>
+          <button class="btn btn-clear" onclick="clearError()">Clear Error</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- POSITION MODE -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-dot"></span>
+        <span class="panel-title">Position Mode</span>
+      </div>
+      <div class="panel-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>ACC (LEFT) – 0~32767 ms</label>
+            <input id="p_acc_l" type="number" value="500" min="0" max="32767" placeholder="0~32767"/>
+          </div>
+          <div class="form-group">
+            <label>ACC (RIGHT) – 0~32767 ms</label>
+            <input id="p_acc_r" type="number" value="500" min="0" max="32767" placeholder="0~32767"/>
+          </div>
+          <div class="form-group">
+            <label>DCC (LEFT) – 0~32767 ms</label>
+            <input id="p_dcc_l" type="number" value="500" min="0" max="32767" placeholder="0~32767"/>
+          </div>
+          <div class="form-group">
+            <label>DCC (RIGHT) – 0~32767 ms</label>
+            <input id="p_dcc_r" type="number" value="500" min="0" max="32767" placeholder="0~32767"/>
+          </div>
+          <div class="form-group">
+            <label>Target Position LEFT – counts</label>
+            <input id="p_tgt_l" type="number" value="0" placeholder="-2147483647~2147483647"/>
+          </div>
+          <div class="form-group">
+            <label>Target Position RIGHT – counts</label>
+            <input id="p_tgt_r" type="number" value="0" placeholder="-2147483647~2147483647"/>
+          </div>
+          <div class="form-group">
+            <label>Target Speed LEFT – 1~1000 r/min</label>
+            <input id="p_spd_l" type="number" value="120" min="1" max="1000" placeholder="1~1000"/>
+          </div>
+          <div class="form-group">
+            <label>Target Speed RIGHT – 1~1000 r/min</label>
+            <input id="p_spd_r" type="number" value="120" min="1" max="1000" placeholder="1~1000"/>
+          </div>
+        </div>
+        <!-- Control Mode toggles -->
+        <div style="display:flex;gap:20px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
+          <div>
+            <div class="status-label" style="margin-bottom:4px;">Control Status</div>
+            <div class="toggle-row">
+              <span class="radio-btn active" id="p_sync_btn" onclick="setSync(true)">Synchronous</span>
+              <span class="radio-btn" id="p_async_btn" onclick="setSync(false)">Asynchronous</span>
+            </div>
+          </div>
+          <div>
+            <div class="status-label" style="margin-bottom:4px;">Control Mode</div>
+            <div class="toggle-row">
+              <span class="radio-btn" id="p_abs_btn" onclick="setAbsolute(true)">Absolute</span>
+              <span class="radio-btn active" id="p_rel_btn" onclick="setAbsolute(false)">Relative</span>
+            </div>
+          </div>
+        </div>
+        <div class="actual-row">
+          <div class="actual-box">
+            <span class="actual-val" id="p_actual_l">—</span>
+            <span class="actual-label">Actual Position LEFT (counts)</span>
+          </div>
+          <div class="actual-box">
+            <span class="actual-val" id="p_actual_r">—</span>
+            <span class="actual-label">Actual Position RIGHT (counts)</span>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-start" onclick="positionStart()">START</button>
+          <button class="btn btn-stop"  onclick="motorStop()">STOP</button>
+          <button class="btn btn-estop" onclick="emergencyStop()">Emergency Stop</button>
+          <button class="btn btn-clear" onclick="clearError()">Clear Error</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Torque | Status | Logger -->
+  <div class="grid-bottom">
+
+    <!-- TORQUE MODE -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-dot"></span>
+        <span class="panel-title">Torque Mode</span>
+      </div>
+      <div class="panel-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Torque Slope LEFT – 0~1000 ms</label>
+            <input id="t_slp_l" type="number" value="300" min="0" max="1000" placeholder="0~1000"/>
+          </div>
+          <div class="form-group">
+            <label>Torque Slope RIGHT – 0~1000 ms</label>
+            <input id="t_slp_r" type="number" value="300" min="0" max="1000" placeholder="0~1000"/>
+          </div>
+          <div class="form-group">
+            <label>Target Torque LEFT – mA</label>
+            <input id="t_tgt_l" type="number" value="0" min="-30000" max="30000" placeholder="-30000~30000"/>
+          </div>
+          <div class="form-group">
+            <label>Target Torque RIGHT – mA</label>
+            <input id="t_tgt_r" type="number" value="0" min="-30000" max="30000" placeholder="-30000~30000"/>
+          </div>
+        </div>
+        <div class="actual-row">
+          <div class="actual-box">
+            <span class="actual-val" id="t_actual_l">—</span>
+            <span class="actual-label">Actual Torque LEFT (0.1 A)</span>
+          </div>
+          <div class="actual-box">
+            <span class="actual-val" id="t_actual_r">—</span>
+            <span class="actual-label">Actual Torque RIGHT (0.1 A)</span>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-start" onclick="torqueStart()">START</button>
+          <button class="btn btn-stop"  onclick="motorStop()">STOP</button>
+          <button class="btn btn-estop" onclick="emergencyStop()">Emergency Stop</button>
+          <button class="btn btn-clear" onclick="clearError()">Clear Error</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATUS PANEL -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-dot"></span>
+        <span class="panel-title">Status</span>
+      </div>
+      <div class="panel-body">
+        <div class="status-grid">
+          <div class="status-item full">
+            <span class="status-label">Status Mode</span>
+            <span id="st_mode" class="mode-badge mode-unknown">—</span>
+          </div>
+          <div class="status-item">
+            <span class="status-val" id="st_temp_l">—</span>
+            <span class="status-label">Motor Temp LEFT (°C)</span>
+          </div>
+          <div class="status-item">
+            <span class="status-val" id="st_temp_r">—</span>
+            <span class="status-label">Motor Temp RIGHT (°C)</span>
+          </div>
+          <div class="status-item full">
+            <span class="status-val" id="st_drv_temp">—</span>
+            <span class="status-label">Driver Temp (°C)</span>
+          </div>
+          <div class="status-item full">
+            <span class="status-val" id="st_voltage">—</span>
+            <span class="status-label">Voltase (V)</span>
+          </div>
+          <div class="status-item">
+            <span class="status-val" id="st_err_l">—</span>
+            <span class="status-label">Error LEFT</span>
+          </div>
+          <div class="status-item">
+            <span class="status-val" id="st_err_r">—</span>
+            <span class="status-label">Error RIGHT</span>
+          </div>
+          <div class="status-item full">
+            <span class="status-val" id="st_status_word">—</span>
+            <span class="status-label">Status Word (hex)</span>
+          </div>
+        </div>
+        <div class="btn-row" style="justify-content:flex-end;">
+          <button class="btn btn-reset" onclick="resetData()">Reset Data</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOGGER PANEL -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-dot"></span>
+        <span class="panel-title">Logger</span>
+      </div>
+      <div class="panel-body">
+        <div class="logger-box" id="logger-box"></div>
+        <div class="logger-footer">
+          <button class="btn-detail" onclick="loadFullLog()">! Detail</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ACK TOAST -->
+<div id="ack-toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════
+const API = '';   // same origin, atau ganti ke 'http://IP:8000'
+const POLL_MS = 500;
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let posSync = true;
+let posAbsolute = false;
+let currentStatus = {};
+
+// ═══════════════════════════════════════
+// POSITION TOGGLE HELPERS
+// ═══════════════════════════════════════
+function setSync(val) {
+  posSync = val;
+  document.getElementById('p_sync_btn').classList.toggle('active',  val);
+  document.getElementById('p_async_btn').classList.toggle('active', !val);
+}
+function setAbsolute(val) {
+  posAbsolute = val;
+  document.getElementById('p_abs_btn').classList.toggle('active', val);
+  document.getElementById('p_rel_btn').classList.toggle('active', !val);
+}
+
+// ═══════════════════════════════════════
+// ACK TOAST
+// ═══════════════════════════════════════
+let ackTimer = null;
+function showAck(text) {
+  const t = document.getElementById('ack-toast');
+  t.textContent = text;
+  t.className = 'show ' + (text.startsWith('ERROR') || text.startsWith('error') ? 'err' : 'ok');
+  if (ackTimer) clearTimeout(ackTimer);
+  ackTimer = setTimeout(() => { t.className = ''; }, 3000);
+}
+
+// ═══════════════════════════════════════
+// STATUS WORD DECODE (ZLAC8015D §5.7)
+// ═══════════════════════════════════════
+function decodeStatusMode(sw) {
+  const state = sw & 0xC0;
+  if (state === 0x00) return { label: 'SHAFT RELEASE', cls: 'mode-stopped' };
+  if (state === 0x40) return { label: 'SHAFT LOCK',    cls: 'mode-velocity' };
+  if (state === 0x80) return { label: 'EMERGENCY STOP',cls: 'mode-stopped' };
+  if (state === 0xC0) return { label: 'ALARM',         cls: 'mode-torque' };
+  return { label: 'UNKNOWN', cls: 'mode-unknown' };
+}
+
+const ERROR_BITS = {
+  0x0001: 'OVR Voltage',
+  0x0002: 'UDR Voltage',
+  0x0004: 'OVR Current',
+  0x0008: 'OVR Load',
+  0x0010: 'Current OOT',
+  0x0020: 'Encoder OOT',
+  0x0040: 'Velocity OOT',
+  0x0080: 'Ref Voltage',
+  0x0100: 'EEPROM',
+  0x0200: 'Hall Error',
+  0x0400: 'Motor OVR Temp',
+};
+
+function decodeError(code) {
+  if (code === 0) return { text: 'OK', cls: 'err-ok' };
+  const bits = [];
+  for (const [bit, name] of Object.entries(ERROR_BITS)) {
+    if (code & parseInt(bit)) bits.push(name);
+  }
+  return { text: bits.length ? bits.join(', ') : `0x${code.toString(16).toUpperCase()}`, cls: 'err-fault' };
+}
+
+// ═══════════════════════════════════════
+// STATUS POLLING
+// ═══════════════════════════════════════
+async function pollStatus() {
+  try {
+    const r = await fetch(API + '/api/bldc/status');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    currentStatus = d;
+    updateUI(d);
+  } catch (e) {
+    setConn(false);
+  }
+}
+
+function updateUI(d) {
+  // Connection
+  setConn(d.connected);
+
+  // Velocity actual
+  document.getElementById('v_actual_l').textContent = d.vel_actual_l ?? '—';
+  document.getElementById('v_actual_r').textContent = d.vel_actual_r ?? '—';
+
+  // Position actual
+  document.getElementById('p_actual_l').textContent = d.pos_actual_l ?? '—';
+  document.getElementById('p_actual_r').textContent = d.pos_actual_r ?? '—';
+
+  // Torque actual
+  document.getElementById('t_actual_l').textContent = d.torque_actual_l ?? '—';
+  document.getElementById('t_actual_r').textContent = d.torque_actual_r ?? '—';
+
+  // Status mode
+  const sw = d.status_word || 0;
+  const mode = decodeStatusMode(sw);
+  const modeEl = document.getElementById('st_mode');
+  modeEl.textContent = mode.label;
+  modeEl.className = 'mode-badge ' + mode.cls;
+
+  // Temperatures
+  const tl = d.motor_temp_l ?? 0;
+  const tr = d.motor_temp_r ?? 0;
+  const dt = d.driver_temp  ?? 0;
+  const voltage = d.bus_voltage ?? 0;
+
+  const stl = document.getElementById('st_temp_l');
+  stl.textContent = tl + ' °C';
+  stl.className = 'status-val' + (tl > 80 ? ' temp-crit' : tl > 60 ? ' temp-warn' : '');
+
+  const str = document.getElementById('st_temp_r');
+  str.textContent = tr + ' °C';
+  str.className = 'status-val' + (tr > 80 ? ' temp-crit' : tr > 60 ? ' temp-warn' : '');
+
+  // Driver temp: raw is 0.1°C
+  const driverC = (dt * 0.1).toFixed(1);
+  const dtEl = document.getElementById('st_drv_temp');
+  dtEl.textContent = driverC + ' °C';
+  dtEl.className = 'status-val' + (driverC > 80 ? ' temp-crit' : driverC > 60 ? ' temp-warn' : '');
+
+  // Bus voltage: raw is 0.01V
+  const volts = (voltage * 0.01).toFixed(2);
+  document.getElementById('st_voltage').textContent = volts + ' V';
+
+  // Errors
+  const el = decodeError(d.error_l || 0);
+  const er = decodeError(d.error_r || 0);
+  const elEl = document.getElementById('st_err_l');
+  elEl.textContent = el.text;
+  elEl.className = 'status-val ' + el.cls;
+  const erEl = document.getElementById('st_err_r');
+  erEl.textContent = er.text;
+  erEl.className = 'status-val ' + er.cls;
+
+  // Status word hex
+  document.getElementById('st_status_word').textContent = '0x' + (sw).toString(16).toUpperCase().padStart(4,'0');
+}
+
+function setConn(ok) {
+  const badge = document.getElementById('conn-badge');
+  const txt   = document.getElementById('conn-text');
+  badge.className = 'conn-badge ' + (ok ? 'connected' : 'disconnected');
+  txt.textContent = ok ? 'CONNECTED' : 'DISCONNECTED';
+}
+
+// ═══════════════════════════════════════
+// COMMANDS
+// ═══════════════════════════════════════
+async function sendCmd(payload) {
+  try {
+    const r = await fetch(API + '/api/bldc/cmd', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    showAck(d.ack || 'sent');
+    if (d.ack === 'OK') loadLogs();
+  } catch (e) {
+    showAck('ERROR: ' + e.message);
+  }
+}
+
+function velocityStart() {
+  sendCmd({
+    mode: 'velocity', action: 'start',
+    acc_l: parseInt(document.getElementById('v_acc_l').value) || 500,
+    acc_r: parseInt(document.getElementById('v_acc_r').value) || 500,
+    dcc_l: parseInt(document.getElementById('v_dcc_l').value) || 500,
+    dcc_r: parseInt(document.getElementById('v_dcc_r').value) || 500,
+    target_l: parseInt(document.getElementById('v_tgt_l').value) || 0,
+    target_r: parseInt(document.getElementById('v_tgt_r').value) || 0,
+  });
+}
+
+function positionStart() {
+  sendCmd({
+    mode: 'position', action: 'start',
+    sync: posSync,
+    absolute: posAbsolute,
+    acc_l:    parseInt(document.getElementById('p_acc_l').value) || 500,
+    acc_r:    parseInt(document.getElementById('p_acc_r').value) || 500,
+    dcc_l:    parseInt(document.getElementById('p_dcc_l').value) || 500,
+    dcc_r:    parseInt(document.getElementById('p_dcc_r').value) || 500,
+    target_l: parseInt(document.getElementById('p_tgt_l').value) || 0,
+    target_r: parseInt(document.getElementById('p_tgt_r').value) || 0,
+    speed_l:  parseInt(document.getElementById('p_spd_l').value) || 120,
+    speed_r:  parseInt(document.getElementById('p_spd_r').value) || 120,
+  });
+}
+
+function torqueStart() {
+  sendCmd({
+    mode: 'torque', action: 'start',
+    slope_l:  parseInt(document.getElementById('t_slp_l').value) || 300,
+    slope_r:  parseInt(document.getElementById('t_slp_r').value) || 300,
+    target_l: parseInt(document.getElementById('t_tgt_l').value) || 0,
+    target_r: parseInt(document.getElementById('t_tgt_r').value) || 0,
+  });
+}
+
+function motorStop()     { sendCmd({ action: 'stop' }); }
+function emergencyStop() { sendCmd({ action: 'emergency_stop' }); }
+function clearError()    { sendCmd({ action: 'clear_error' }); }
+function resetData()     { sendCmd({ action: 'reset_data' }); }
+
+// ═══════════════════════════════════════
+// LOGGER
+// ═══════════════════════════════════════
+function renderLogs(entries) {
+  const box = document.getElementById('logger-box');
+  if (!entries.length) {
+    box.innerHTML = '<span style="color:var(--muted)">No log entries.</span>';
+    return;
+  }
+  const rows = entries.map(e => {
+    const tag = (e.tag || 'SYS').toUpperCase();
+    let tagCls = 'tag-sys';
+    if (tag === 'VELOCITY') tagCls = 'tag-vel';
+    else if (tag === 'POSITION') tagCls = 'tag-pos';
+    else if (tag === 'TORQUE') tagCls = 'tag-tq';
+    else if ((e.msg || e.note || '').toUpperCase().includes('ERROR')) tagCls = 'tag-err';
+
+    const msg = e.msg || e.note || '';
+    return `<div class="log-entry">
+      <span class="log-ts">${e.ts_display || ''}</span>
+      <span class="log-tag ${tagCls}">[${tag}]</span>
+      <span class="log-msg">${msg}</span>
+    </div>`;
+  });
+  box.innerHTML = rows.join('');
+  box.scrollTop = box.scrollHeight;
+}
+
+async function loadLogs() {
+  try {
+    const r = await fetch(API + '/api/bldc/logs?limit=30');
+    const d = await r.json();
+    renderLogs(d);
+  } catch(e) {}
+}
+
+async function loadFullLog() {
+  try {
+    const r = await fetch(API + '/api/bldc/logs/full');
+    const d = await r.json();
+    renderLogs(d);
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+loadLogs();
+setInterval(pollStatus, POLL_MS);
+setInterval(loadLogs,   5000);
+pollStatus();
+</script>
+</body>
+</html>

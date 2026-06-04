@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log Detail – Magnetic Sensor</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 12px;
+      align-items: center; margin-bottom: 18px;
+      animation: fade-in-up .35s ease both;
+    }
+    .search-box {
+      flex: 1; min-width: 180px; padding: 10px 14px;
+      border: 2.5px solid #D1D5DB; border-radius: 10px;
+      font-family: var(--font-mono); font-size: .85rem;
+      background: #fff; outline: none;
+      transition: border-color .15s;
+    }
+    .search-box:focus { border-color: var(--yellow); }
+
+    .filter-btn {
+      padding: 8px 14px; border: 2.5px solid #D1D5DB;
+      border-radius: 9px; background: #fff;
+      font-family: var(--font-main); font-size: .8rem;
+      font-weight: 800; color: var(--text-mid); cursor: pointer;
+      transition: all .15s;
+    }
+    .filter-btn:hover { border-color: #9CA3AF; }
+    .filter-btn.active { border-color: var(--yellow); background: var(--yellow); color: var(--text-dark); }
+    .filter-btn.active.f-err { border-color: var(--red-light); background: var(--red-light); color: #fff; }
+    .filter-btn.active.f-ok  { border-color: var(--green-light); background: var(--green-light); color: #fff; }
+
+    .export-btn {
+      padding: 8px 16px; border: none; border-radius: 9px;
+      background: var(--text-dark); color: #fff;
+      font-family: var(--font-main); font-size: .8rem;
+      font-weight: 800; cursor: pointer; transition: background .15s;
+    }
+    .export-btn:hover { background: #333; }
+
+    .table-wrap {
+      background: #fff; border-radius: 14px;
+      box-shadow: 0 4px 0 #DDD; overflow: hidden;
+      animation: fade-in-up .4s ease .05s both;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: var(--yellow); }
+    thead th {
+      padding: 12px 14px; text-align: left;
+      font-size: .83rem; font-weight: 900; white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid #F3F4F6; transition: background .1s; }
+    tbody tr:hover { background: #FFFBEB; }
+    tbody td { padding: 10px 14px; font-size: .8rem; font-family: var(--font-mono); }
+
+    .badge {
+      display: inline-block; padding: 2px 9px;
+      border-radius: 20px; font-size: .72rem;
+      font-weight: 800; font-family: var(--font-main);
+    }
+    .badge.ok   { background: #DCFCE7; color: #15803D; }
+    .badge.err  { background: #FEE2E2; color: #DC2626; }
+    .badge.info { background: #DBEAFE; color: #1D4ED8; }
+    .badge.warn { background: #FEF9C3; color: #92400E; }
+
+    .pagination {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-top: 1px solid #F3F4F6;
+      font-size: .8rem; font-weight: 700; color: var(--text-mid);
+    }
+    .page-btns { display: flex; gap: 5px; }
+    .page-btn {
+      width: 32px; height: 32px;
+      border: 2px solid #E5E7EB; border-radius: 7px;
+      background: #fff; font-size: .8rem; font-weight: 800;
+      cursor: pointer; transition: all .15s;
+    }
+    .page-btn:hover  { border-color: var(--yellow); }
+    .page-btn.active { background: var(--yellow); border-color: var(--yellow); }
+    .page-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+    .empty { padding: 40px; text-align: center; color: var(--text-light); font-size: .9rem; font-weight: 700; }
+
+    .live-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--green-light); color: #fff;
+      font-size: .75rem; font-weight: 800;
+      padding: 3px 10px; border-radius: 20px; margin-left: 10px;
+    }
+    .live-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #fff; animation: pulse-green 1.2s infinite;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-brand">
+      <svg class="logo-svg" viewBox="0 0 60 60" fill="none">
+        <polygon points="30,3 57,51 3,51" fill="none" stroke="var(--blue-logo)" stroke-width="4.5" stroke-linejoin="round"/>
+        <polygon points="30,15 49,47 11,47" fill="var(--blue-logo)" opacity=".15"/>
+        <line x1="19" y1="35" x2="41" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="30" y1="17" x2="19" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="30" y1="17" x2="41" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+      </svg>
+      <div class="brand-text">
+        <div class="company">PT. Adhikara Wiyasa Gani</div>
+        <div class="subtitle">
+          Log Detail – Magnetic Sensor
+          <span class="live-badge"><div class="live-dot"></div>LIVE</span>
+        </div>
+      </div>
+    </div>
+    <div class="header-amr">AMR 25<br>Teknisi Kontrol</div>
+  </header>
+
+  <div class="toolbar">
+    <input class="search-box" id="searchBox" type="text" placeholder="Cari tag, pesan, level…" oninput="applyFilters()">
+    <div style="display:flex;gap:6px;">
+      <button class="filter-btn active" id="fAll" onclick="setFilter('all')">Semua</button>
+      <button class="filter-btn f-ok"  id="fOK"  onclick="setFilter('ok')">OK</button>
+      <button class="filter-btn f-err" id="fErr" onclick="setFilter('error')">ERROR</button>
+    </div>
+    <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('ts')">Timestamp <span id="s-ts">↕</span></th>
+          <th onclick="sortBy('tag')">Tag <span id="s-tag">↕</span></th>
+          <th>Level</th>
+          <th>Pesan</th>
+        </tr>
+      </thead>
+      <tbody id="logTbody">
+        <tr><td colspan="4" class="empty">Memuat log…</td></tr>
+      </tbody>
+    </table>
+    <div class="pagination">
+      <span id="pageInfo">–</span>
+      <div class="page-btns" id="pageBtns"></div>
+    </div>
+  </div>
+
+  <a class="back-link" href="magnetic.html">&#8592; Kembali ke Magnetic Sensor</a>
+
+  <script>
+    const PAGE_SIZE = 20;
+    let allLogs = [], filteredLogs = [];
+    let currentPage = 1, sortField = 'ts', sortAsc = false;
+    let levelFilter = 'all';
+
+    async function fetchLogs() {
+      try {
+        const res = await fetch('/api/magnetic/logs/full');
+        allLogs = await res.json();
+        applyFilters();
+      } catch {
+        document.getElementById('logTbody').innerHTML = '<tr><td colspan="4" class="empty">Gagal memuat log.</td></tr>';
+      }
+    }
+
+    function setFilter(val) {
+      levelFilter = val;
+      ['fAll','fOK','fErr'].forEach(id => document.getElementById(id).classList.remove('active'));
+      document.getElementById({all:'fAll',ok:'fOK',error:'fErr'}[val]).classList.add('active');
+      currentPage = 1;
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const q = document.getElementById('searchBox').value.toLowerCase();
+      filteredLogs = allLogs.filter(l => {
+        if (levelFilter !== 'all') {
+          const lvl = (l.level || '').toLowerCase();
+          if (levelFilter === 'ok'    && lvl !== 'ok')    return false;
+          if (levelFilter === 'error' && lvl !== 'error') return false;
+        }
+        if (q) {
+          const hay = `${l.ts} ${l.tag} ${l.msg} ${l.level}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+      filteredLogs.sort((a,b) => {
+        let va = a[sortField]||'', vb = b[sortField]||'';
+        if (va < vb) return sortAsc ? -1 : 1;
+        if (va > vb) return sortAsc ?  1 : -1;
+        return 0;
+      });
+      currentPage = Math.min(currentPage, Math.ceil(filteredLogs.length/PAGE_SIZE)||1);
+      renderTable();
+      renderPagination();
+    }
+
+    function sortBy(f) {
+      if (sortField === f) sortAsc = !sortAsc;
+      else { sortField = f; sortAsc = false; }
+      applyFilters();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('logTbody');
+      const start = (currentPage-1)*PAGE_SIZE;
+      const slice = filteredLogs.slice(start, start+PAGE_SIZE);
+      if (!slice.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty">Tidak ada log.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = slice.map(l => {
+        const lvl = (l.level||'info').toLowerCase();
+        const cls = {ok:'ok', error:'err', warn:'warn'}[lvl] || 'info';
+        return `<tr>
+          <td>${esc(l.ts_display||l.ts||'')}</td>
+          <td>${esc(l.tag||'')}</td>
+          <td><span class="badge ${cls}">${esc((l.level||'INFO').toUpperCase())}</span></td>
+          <td>${esc(l.msg||'')}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderPagination() {
+      const total = filteredLogs.length;
+      const pages = Math.ceil(total/PAGE_SIZE)||1;
+      const s = Math.min((currentPage-1)*PAGE_SIZE+1, total);
+      const e = Math.min(currentPage*PAGE_SIZE, total);
+      document.getElementById('pageInfo').textContent = `${s}–${e} dari ${total} log`;
+      const btns = document.getElementById('pageBtns');
+      btns.innerHTML = '';
+      const prev = mkBtn('‹', currentPage<=1, () => { currentPage--; applyFilters(); });
+      btns.appendChild(prev);
+      const rs = Math.max(1, currentPage-2);
+      const re = Math.min(pages, rs+4);
+      for (let p=rs; p<=re; p++) {
+        const b = mkBtn(p, false, () => { currentPage=p; applyFilters(); });
+        if (p===currentPage) b.classList.add('active');
+        btns.appendChild(b);
+      }
+      btns.appendChild(mkBtn('›', currentPage>=pages, () => { currentPage++; applyFilters(); }));
+    }
+
+    function mkBtn(lbl, dis, fn) {
+      const b = document.createElement('button');
+      b.className='page-btn'; b.textContent=lbl; b.disabled=dis;
+      if (!dis) b.addEventListener('click', fn);
+      return b;
+    }
+
+    function exportCSV() {
+      const rows = filteredLogs.map(l =>
+        `"${l.ts_display||l.ts||''}","${l.tag||''}","${l.level||''}","${(l.msg||'').replace(/"/g,"'")}"`
+      );
+      const blob = new Blob(['Timestamp,Tag,Level,Pesan\n' + rows.join('\n')], {type:'text/csv'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `mag_log_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    }
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    fetchLogs();
+    setInterval(fetchLogs, 5000);
+  </script>
+</body>
+</html>

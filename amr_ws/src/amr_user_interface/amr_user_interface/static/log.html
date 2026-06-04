@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log Detail – Modbus RTU Relay</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── TOOLBAR ── */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+      animation: fade-in-up .35s ease both;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+      padding: 11px 16px;
+      border: 2.5px solid #D1D5DB;
+      border-radius: 10px;
+      font-family: var(--font-mono);
+      font-size: .88rem;
+      font-weight: 600;
+      color: var(--text-dark);
+      background: var(--white);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .search-box:focus { border-color: var(--yellow); }
+    .search-box::placeholder { color: #9CA3AF; }
+
+    .filter-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      padding: 9px 16px;
+      border: 2.5px solid #D1D5DB;
+      border-radius: 9px;
+      background: var(--white);
+      font-family: var(--font-main);
+      font-size: .83rem;
+      font-weight: 800;
+      color: var(--text-mid);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .filter-btn:hover              { border-color: #9CA3AF; }
+    .filter-btn.active             { border-color: var(--yellow); background: var(--yellow); color: var(--text-dark); }
+    .filter-btn.active.green-fil   { border-color: var(--green-light); background: var(--green-light); color: #fff; }
+    .filter-btn.active.red-fil     { border-color: var(--red-light);   background: var(--red-light);   color: #fff; }
+
+    .export-btn {
+      padding: 9px 18px;
+      border: none;
+      border-radius: 9px;
+      background: var(--text-dark);
+      color: var(--white);
+      font-family: var(--font-main);
+      font-size: .83rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .export-btn:hover { background: #333; }
+
+    /* ── DATE RANGE ── */
+    .date-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 18px;
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--text-mid);
+      animation: fade-in-up .38s ease .05s both;
+    }
+
+    .date-input {
+      padding: 8px 12px;
+      border: 2px solid #D1D5DB;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: .83rem;
+      background: var(--white);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .date-input:focus { border-color: var(--yellow); }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      background: var(--white);
+      border-radius: 16px;
+      box-shadow: 0 4px 0 #DDD;
+      overflow: hidden;
+      animation: fade-in-up .4s ease .08s both;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead tr {
+      background: var(--yellow);
+    }
+
+    thead th {
+      padding: 13px 16px;
+      text-align: left;
+      font-size: .85rem;
+      font-weight: 900;
+      color: var(--text-dark);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      transition: background .15s;
+    }
+    thead th:hover { background: #EFBA00; }
+    thead th .sort-icon { margin-left: 5px; opacity: .5; font-size: .75rem; }
+    thead th.sorted .sort-icon { opacity: 1; }
+
+    tbody tr {
+      border-bottom: 1px solid #F3F4F6;
+      transition: background .1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #FFFBEB; }
+
+    tbody td {
+      padding: 11px 16px;
+      font-size: .84rem;
+      font-family: var(--font-mono);
+      color: var(--text-dark);
+    }
+
+    /* badges */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: .78rem;
+      font-weight: 800;
+      font-family: var(--font-main);
+      letter-spacing: .03em;
+    }
+    .badge.on  { background: #DCFCE7; color: var(--green); }
+    .badge.off { background: #FEE2E2; color: var(--red); }
+    .badge.ok  { background: #DCFCE7; color: var(--green); }
+    .badge.err { background: #FEE2E2; color: var(--red); }
+    .badge.all { background: #FEF9C3; color: #92400E; }
+
+    .ch-pill {
+      display: inline-block;
+      background: #F3F4F6;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-weight: 700;
+      color: var(--text-mid);
+    }
+    .ch-pill.all { background: var(--yellow-bg); color: #92400E; }
+
+    /* ── PAGINATION ── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-top: 1px solid #F3F4F6;
+      font-size: .83rem;
+      font-weight: 700;
+      color: var(--text-mid);
+    }
+
+    .page-btns { display: flex; gap: 6px; }
+
+    .page-btn {
+      width: 34px; height: 34px;
+      border: 2px solid #E5E7EB;
+      border-radius: 8px;
+      background: var(--white);
+      font-family: var(--font-main);
+      font-size: .83rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .page-btn:hover           { border-color: var(--yellow); }
+    .page-btn.active          { background: var(--yellow); border-color: var(--yellow); }
+    .page-btn:disabled        { opacity: .35; cursor: not-allowed; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      padding: 48px;
+      text-align: center;
+      color: var(--text-light);
+      font-size: .9rem;
+      font-weight: 700;
+    }
+
+    /* ── STATS ROW ── */
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      animation: fade-in-up .35s ease .02s both;
+    }
+
+    .stat-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 12px 20px;
+      box-shadow: 0 3px 0 #ddd;
+      text-align: center;
+      min-width: 110px;
+    }
+
+    .stat-num {
+      font-size: 1.6rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .stat-num.green { color: var(--green); }
+    .stat-num.red   { color: var(--red); }
+    .stat-num.yellow{ color: #B45309; }
+
+    .stat-label {
+      font-size: .75rem;
+      font-weight: 700;
+      color: var(--text-light);
+      margin-top: 4px;
+    }
+
+    /* live badge */
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--green-light);
+      color: #fff;
+      font-size: .78rem;
+      font-weight: 800;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-left: 12px;
+      vertical-align: middle;
+    }
+    .live-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #fff;
+      animation: pulse-green 1.2s infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-brand">
+      <svg class="logo-svg" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="30,3 57,51 3,51" fill="none" stroke="var(--blue-logo)" stroke-width="4.5" stroke-linejoin="round"/>
+        <polygon points="30,15 49,47 11,47" fill="var(--blue-logo)" opacity=".15"/>
+        <line x1="19" y1="35" x2="41" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="30" y1="17" x2="19" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="30" y1="17" x2="41" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+      </svg>
+      <div class="brand-text">
+        <div class="company">PT. Adhikara Wiyasa Gani</div>
+        <div class="subtitle">
+          Log Detail – Modbus RTU Relay
+          <span class="live-badge"><div class="live-dot"></div> LIVE</span>
+        </div>
+      </div>
+    </div>
+    <div class="header-amr">AMR 25<br>Teknisi Kontrol</div>
+  </header>
+
+  <!-- STATS -->
+  <div class="stats-row" id="statsRow">
+    <div class="stat-card"><div class="stat-num" id="statTotal">–</div><div class="stat-label">Total Log</div></div>
+    <div class="stat-card"><div class="stat-num green" id="statOK">–</div><div class="stat-label">OK</div></div>
+    <div class="stat-card"><div class="stat-num red"   id="statErr">–</div><div class="stat-label">ERROR</div></div>
+    <div class="stat-card"><div class="stat-num yellow" id="statAll">–</div><div class="stat-label">ALL CMD</div></div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <input class="search-box" id="searchBox" type="text" placeholder="Cari channel, status, catatan…" oninput="applyFilters()">
+
+    <div class="filter-group">
+      <button class="filter-btn active"              id="fAll"  onclick="setStateFilter('all')">Semua</button>
+      <button class="filter-btn green-fil"           id="fON"   onclick="setStateFilter('ON')">ON</button>
+      <button class="filter-btn red-fil"             id="fOFF"  onclick="setStateFilter('OFF')">OFF</button>
+      <button class="filter-btn"                     id="fERR"  onclick="setStateFilter('ERROR')">ERROR</button>
+    </div>
+
+    <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+
+  <!-- DATE RANGE -->
+  <div class="date-row">
+    <span>Dari:</span>
+    <input class="date-input" type="date" id="dateFrom" onchange="applyFilters()">
+    <span>Sampai:</span>
+    <input class="date-input" type="date" id="dateTo" onchange="applyFilters()">
+    <button class="filter-btn" onclick="clearDates()" style="padding:7px 12px">Reset Tanggal</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('ts')"      id="th-ts">Timestamp <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('channel')" id="th-ch">Channel   <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('state')"   id="th-st">State     <span class="sort-icon">↕</span></th>
+          <th>Keterangan</th>
+        </tr>
+      </thead>
+      <tbody id="logTbody">
+        <tr><td colspan="4" class="empty-state">Memuat log…</td></tr>
+      </tbody>
+    </table>
+    <div class="pagination">
+      <span id="paginationInfo">–</span>
+      <div class="page-btns" id="pageBtns"></div>
+    </div>
+  </div>
+
+  <a class="back-link" href="relay.html">&#8592; Kembali ke Kontrol Relay</a>
+
+  <script>
+    // ─────────────────────────────────────────────
+    // CONFIG
+    // ─────────────────────────────────────────────
+    const API_LOGS = 'http://localhost:8000/api/relay/logs/full';
+    // Expected full log response shape (array):
+    // [
+    //   {
+    //     "ts":      "2025-07-14 12:01:33",   // ISO datetime string
+    //     "channel": 2,                         // int, -1 = ALL
+    //     "state":   "ON",                      // "ON" | "OFF"
+    //     "note":    "OK"                        // "OK" | "ALL" | "ERROR <msg>"
+    //   }, ...
+    // ]
+
+    const PAGE_SIZE = 15;
+
+    let allLogs      = [];
+    let filteredLogs = [];
+    let currentPage  = 1;
+    let sortField    = 'ts';
+    let sortAsc      = false;
+    let stateFilter  = 'all';
+
+    // ─────────────────────────────────────────────
+    // FETCH
+    // ─────────────────────────────────────────────
+    async function fetchLogs() {
+      try {
+        const res  = await fetch(API_LOGS);
+        allLogs    = await res.json();
+        updateStats();
+        applyFilters();
+      } catch {
+        document.getElementById('logTbody').innerHTML =
+          '<tr><td colspan="4" class="empty-state">Gagal memuat log – periksa koneksi API.</td></tr>';
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // STATS
+    // ─────────────────────────────────────────────
+    function updateStats() {
+      document.getElementById('statTotal').textContent = allLogs.length;
+      document.getElementById('statOK').textContent    = allLogs.filter(l => l.note === 'OK').length;
+      document.getElementById('statErr').textContent   = allLogs.filter(l => l.note && l.note.startsWith('ERROR')).length;
+      document.getElementById('statAll').textContent   = allLogs.filter(l => l.channel === -1).length;
+    }
+
+    // ─────────────────────────────────────────────
+    // FILTER + SORT
+    // ─────────────────────────────────────────────
+    function setStateFilter(val) {
+      stateFilter = val;
+      ['fAll','fON','fOFF','fERR'].forEach(id => {
+        document.getElementById(id).classList.remove('active');
+      });
+      const map = { all:'fAll', ON:'fON', OFF:'fOFF', ERROR:'fERR' };
+      document.getElementById(map[val]).classList.add('active');
+      currentPage = 1;
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const q        = document.getElementById('searchBox').value.toLowerCase();
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo   = document.getElementById('dateTo').value;
+
+      filteredLogs = allLogs.filter(l => {
+        // state filter
+        if (stateFilter === 'ON'    && l.state !== 'ON') return false;
+        if (stateFilter === 'OFF'   && l.state !== 'OFF') return false;
+        if (stateFilter === 'ERROR' && !(l.note && l.note.startsWith('ERROR'))) return false;
+
+        // search
+        if (q) {
+          const chLabel = l.channel === -1 ? 'all' : `ch${l.channel + 1}`;
+          const haystack = `${l.ts} ${chLabel} ${l.state} ${l.note}`.toLowerCase();
+          if (!haystack.includes(q)) return false;
+        }
+
+        // date range
+        if (dateFrom && l.ts < dateFrom) return false;
+        if (dateTo   && l.ts.slice(0,10) > dateTo) return false;
+
+        return true;
+      });
+
+      // sort
+      filteredLogs.sort((a, b) => {
+        let va = a[sortField], vb = b[sortField];
+        if (sortField === 'channel') { va = +va; vb = +vb; }
+        if (va < vb) return sortAsc ?  -1 : 1;
+        if (va > vb) return sortAsc ?   1 : -1;
+        return 0;
+      });
+
+      currentPage = Math.min(currentPage, Math.ceil(filteredLogs.length / PAGE_SIZE) || 1);
+      renderTable();
+      renderPagination();
+    }
+
+    function sortBy(field) {
+      if (sortField === field) sortAsc = !sortAsc;
+      else { sortField = field; sortAsc = false; }
+
+      // update header icons
+      ['ts','ch','st'].forEach(k => {
+        const th = document.getElementById(`th-${k}`);
+        if (th) th.classList.remove('sorted');
+      });
+      const thMap = { ts:'th-ts', channel:'th-ch', state:'th-st' };
+      const th = document.getElementById(thMap[field]);
+      if (th) {
+        th.classList.add('sorted');
+        th.querySelector('.sort-icon').textContent = sortAsc ? '↑' : '↓';
+      }
+
+      applyFilters();
+    }
+
+    // ─────────────────────────────────────────────
+    // RENDER TABLE
+    // ─────────────────────────────────────────────
+    function renderTable() {
+      const tbody  = document.getElementById('logTbody');
+      const start  = (currentPage - 1) * PAGE_SIZE;
+      const slice  = filteredLogs.slice(start, start + PAGE_SIZE);
+
+      if (!slice.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Tidak ada log yang cocok.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = slice.map(l => {
+        const isAll  = l.channel === -1;
+        const chHtml = isAll
+          ? `<span class="ch-pill all">ALL</span>`
+          : `<span class="ch-pill">CH ${l.channel + 1}</span>`;
+
+        const stClass = l.state === 'ON' ? 'on' : 'off';
+        const stHtml  = `<span class="badge ${stClass}">${l.state}</span>`;
+
+        const isErr   = l.note && l.note.startsWith('ERROR');
+        const noteHtml = isErr
+          ? `<span class="badge err">${escHtml(l.note)}</span>`
+          : (l.note === 'ALL'
+              ? `<span class="badge all">ALL CMD</span>`
+              : `<span class="badge ok">${escHtml(l.note)}</span>`);
+
+        const tsLabel = l.ts_display || l.ts || '-';
+        return `
+          <tr>
+            <td>${escHtml(tsLabel)}</td>
+            <td>${chHtml}</td>
+            <td>${stHtml}</td>
+            <td>${noteHtml}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ─────────────────────────────────────────────
+    // PAGINATION
+    // ─────────────────────────────────────────────
+    function renderPagination() {
+      const total = filteredLogs.length;
+      const pages = Math.ceil(total / PAGE_SIZE) || 1;
+      const start = Math.min((currentPage - 1) * PAGE_SIZE + 1, total);
+      const end   = Math.min(currentPage * PAGE_SIZE, total);
+
+      document.getElementById('paginationInfo').textContent =
+        `Menampilkan ${start}–${end} dari ${total} log`;
+
+      const btns = document.getElementById('pageBtns');
+      btns.innerHTML = '';
+
+      // Prev
+      const prev = makePageBtn('‹', currentPage <= 1, () => { currentPage--; applyFilters(); });
+      btns.appendChild(prev);
+
+      // Page numbers (max 5 shown)
+      const rangeStart = Math.max(1, currentPage - 2);
+      const rangeEnd   = Math.min(pages, rangeStart + 4);
+
+      for (let p = rangeStart; p <= rangeEnd; p++) {
+        const btn = makePageBtn(p, false, () => { currentPage = p; applyFilters(); });
+        if (p === currentPage) btn.classList.add('active');
+        btns.appendChild(btn);
+      }
+
+      // Next
+      const next = makePageBtn('›', currentPage >= pages, () => { currentPage++; applyFilters(); });
+      btns.appendChild(next);
+    }
+
+    function makePageBtn(label, disabled, onClick) {
+      const btn = document.createElement('button');
+      btn.className = 'page-btn';
+      btn.textContent = label;
+      btn.disabled = disabled;
+      if (!disabled) btn.addEventListener('click', onClick);
+      return btn;
+    }
+
+    // ─────────────────────────────────────────────
+    // DATE HELPERS
+    // ─────────────────────────────────────────────
+    function clearDates() {
+      document.getElementById('dateFrom').value = '';
+      document.getElementById('dateTo').value   = '';
+      applyFilters();
+    }
+
+    // ─────────────────────────────────────────────
+    // EXPORT CSV
+    // ─────────────────────────────────────────────
+    function exportCSV() {
+      const header = 'Timestamp,Channel,State,Keterangan\n';
+      const rows   = filteredLogs.map(l => {
+        const ch = l.channel === -1 ? 'ALL' : `CH${l.channel + 1}`;
+        return `"${l.ts}","${ch}","${l.state}","${l.note}"`;
+      }).join('\n');
+
+      const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `relay_log_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ─────────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────────
+    fetchLogs();
+    setInterval(fetchLogs, 5000);  // refresh log setiap 5 detik
+  </script>
+</body>
+</html>

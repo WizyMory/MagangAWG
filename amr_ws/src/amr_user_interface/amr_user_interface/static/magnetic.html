@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magnetic Line Sensor – AMR 25</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── PAGE BG ── */
+    body { background: #F0F0F0; }
+
+    /* ── SENSOR DOTS ROW ── */
+    .dot-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0;
+      margin: 28px 0 20px;
+      animation: fade-in-up .35s ease both;
+    }
+
+    .dot-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 76px;
+    }
+
+    .dot {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #9CA3AF;
+      box-shadow: 0 3px 0 #6B7280;
+      transition: background .15s, box-shadow .15s;
+      flex-shrink: 0;
+    }
+
+    .dot.detected   { background: #22C55E; box-shadow: 0 3px 0 #15803D; animation: pulse-green 1.2s infinite; }
+    .dot.undetected { background: #EF4444; box-shadow: 0 3px 0 #B91C1C; }
+    .dot.unknown    { background: #9CA3AF; box-shadow: 0 3px 0 #6B7280; }
+
+    .dot-label {
+      font-size: .75rem;
+      font-weight: 900;
+      color: var(--text-dark);
+      margin-top: 7px;
+    }
+
+    /* ── MAIN 3-COL LAYOUT ── */
+    .main-row {
+      display: grid;
+      grid-template-columns: 1fr 320px 230px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    /* ── LOG BOX ── */
+    .log-panel {
+      background: #9E9E9E;
+      border: 2.5px solid #888;
+      border-radius: 12px;
+      padding: 14px 16px;
+      min-height: 320px;
+      max-height: 380px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      animation: fade-in-up .35s ease .05s both;
+    }
+
+    .log-title {
+      font-size: .95rem;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+
+    .log-content {
+      flex: 1;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      line-height: 1.65;
+      color: #F0F0F0;
+    }
+
+    .log-content::-webkit-scrollbar { width: 4px; }
+    .log-content::-webkit-scrollbar-thumb { background: #6B7280; border-radius: 4px; }
+
+    .log-line { display: flex; gap: 8px; padding: 1px 0; }
+    .log-ts   { color: #D1FAE5; flex-shrink: 0; }
+    .log-tag  { color: #FCD34D; flex-shrink: 0; min-width: 60px; }
+    .log-msg  { color: #F3F4F6; word-break: break-word; }
+    .log-err  { color: #FCA5A5; }
+    .log-ok   { color: #86EFAC; }
+    .log-info { color: #BAE6FD; }
+
+    .detail-link {
+      position: absolute;
+      bottom: 10px; right: 14px;
+      color: #BAE6FD;
+      font-size: .78rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      text-decoration: underline;
+      transition: color .15s;
+    }
+    .detail-link:hover { color: #E0F2FE; }
+
+    /* ── SETTINGS PANEL ── */
+    .settings-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      animation: fade-in-up .35s ease .08s both;
+    }
+
+    .card {
+      background: #D1D5DB;
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 4px 0 #9CA3AF;
+    }
+
+    .card-title {
+      font-size: .9rem;
+      font-weight: 900;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+    }
+
+    /* input + button row */
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .input-row label {
+      font-size: .8rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      min-width: 70px;
+    }
+
+    .inp-field {
+      flex: 1;
+      padding: 7px 10px;
+      border: 2px solid #9CA3AF;
+      border-radius: 8px;
+      background: #F5F5DC;
+      font-family: var(--font-mono);
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--text-dark);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .inp-field:focus { border-color: var(--yellow); }
+    .inp-field::placeholder { color: #9CA3AF; font-size: .75rem; }
+
+    .sel-field {
+      flex: 1;
+      padding: 7px 10px;
+      border: 2px solid #9CA3AF;
+      border-radius: 8px;
+      background: #F5F5DC;
+      font-family: var(--font-main);
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      outline: none;
+      cursor: pointer;
+    }
+    .sel-field:focus { border-color: var(--yellow); }
+    .sel-field:disabled { opacity: .45; cursor: not-allowed; }
+
+    .action-btn {
+      padding: 7px 14px;
+      border: none;
+      border-radius: 8px;
+      background: #4B5563;
+      color: #fff;
+      font-family: var(--font-main);
+      font-size: .8rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #374151;
+      transition: filter .15s, transform .1s;
+      white-space: nowrap;
+    }
+    .action-btn:hover  { filter: brightness(1.15); transform: translateY(-1px); }
+    .action-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #374151; }
+
+    /* ── OUTPUT MODE TOGGLES ── */
+    .mode-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .mode-btn {
+      padding: 5px 12px;
+      border: 2px solid #9CA3AF;
+      border-radius: 20px;
+      background: #E5E7EB;
+      font-family: var(--font-main);
+      font-size: .75rem;
+      font-weight: 800;
+      color: #374151;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .mode-btn:hover { border-color: #6B7280; }
+    .mode-btn.active.response   { background: #1C1C1C; color: #fff; border-color: #111; }
+    .mode-btn.active.continuous { background: #7A6F00; color: #fff; border-color: #5A5100; }
+    .mode-btn.active.change     { background: #4A5568; color: #fff; border-color: #2D3748; }
+
+    /* ── AVG / QUALITY ── */
+    .readout-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 12px;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .readout-label {
+      font-size: .85rem;
+      font-weight: 900;
+      color: var(--text-dark);
+    }
+
+    .readout-val {
+      background: #F5F5DC;
+      border: 1.5px solid #9CA3AF;
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-family: var(--font-mono);
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* ── LINE STATUS LEGEND ── */
+    .legend-panel {
+      background: var(--yellow);
+      border-radius: 16px;
+      padding: 20px 22px;
+      box-shadow: 0 6px 0 var(--yellow-dark);
+      animation: fade-in-up .35s ease .12s both;
+    }
+
+    .legend-title {
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: var(--text-dark);
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .legend-dot {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .legend-dot.green { background: #22C55E; }
+    .legend-dot.red   { background: #EF4444; }
+    .legend-dot.gray  { background: #9CA3AF; }
+
+    .legend-label {
+      font-size: .95rem;
+      font-weight: 900;
+      color: var(--text-dark);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-brand">
+      <svg class="logo-svg" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="30,3 57,51 3,51" fill="none" stroke="var(--blue-logo)" stroke-width="4.5" stroke-linejoin="round"/>
+        <polygon points="30,15 49,47 11,47" fill="var(--blue-logo)" opacity=".15"/>
+        <line x1="19" y1="35" x2="41" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="30" y1="17" x2="19" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="30" y1="17" x2="41" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+      </svg>
+      <div class="brand-text">
+        <div class="company">PT. Adhikara Wiyasa Gani</div>
+        <div class="subtitle">Magnetic Line Sensor</div>
+      </div>
+    </div>
+    <div class="header-amr">AMR 25<br>Teknisi Kontrol</div>
+  </header>
+
+  <!-- CONNECTION BANNER -->
+  <div class="conn-banner wait" id="connBanner"
+       style="display:inline-flex;align-items:center;gap:10px;border-radius:10px;
+              padding:8px 16px;font-size:.85rem;font-weight:800;margin-bottom:16px;
+              background:#fff;border:1.5px solid #D1D5DB;box-shadow:0 2px 0 #ddd;">
+    <div class="conn-indicator" style="width:10px;height:10px;border-radius:50%;background:#9CA3AF;flex-shrink:0;"></div>
+    <span id="connText">Menghubungkan…</span>
+  </div>
+
+  <!-- SENSOR DOTS -->
+  <div class="dot-row" id="dotRow">
+    <!-- Rendered by JS -->
+  </div>
+
+  <!-- MAIN ROW -->
+  <div class="main-row">
+
+    <!-- LOG -->
+    <div class="log-panel">
+      <div class="log-title">Log</div>
+      <div class="log-content" id="logContent">
+        <div class="log-line"><span class="log-msg log-info">Menunggu aktivitas…</span></div>
+      </div>
+      <span class="detail-link" onclick="window.location.href='mag_log.html'">! Detail</span>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="settings-panel">
+
+      <!-- Address & Baudrate -->
+      <div class="card">
+        <div class="card-title">Address</div>
+        <div class="input-row">
+          <input class="inp-field" id="inpAddress" type="number" min="1" max="254" placeholder="1 ~ 254">
+          <button class="action-btn" onclick="doReadAddress()">Read</button>
+          <button class="action-btn" onclick="doWriteAddress()">Write</button>
+        </div>
+
+        <div class="card-title" style="margin-top:8px;">Baudrate</div>
+        <div class="input-row">
+          <select class="sel-field" id="selBaudrate">
+            <option value="2400">2400</option>
+            <option value="4800">4800</option>
+            <option value="9600" selected>9600</option>
+            <option value="19200">19200</option>
+            <option value="38400">38400</option>
+            <option value="57600">57600</option>
+            <option value="115200">115200</option>
+          </select>
+          <button class="action-btn" onclick="doWriteBaudrate()">Write</button>
+        </div>
+      </div>
+
+      <!-- Output Mode -->
+      <div class="card">
+        <div class="card-title">Output Mode Setting</div>
+        <div class="mode-row" id="modeRow">
+          <button class="mode-btn response"   id="btnResponse"   onclick="setMode('response')">Response</button>
+          <button class="mode-btn continuous" id="btnContinuous" onclick="setMode('continuous')">Continous</button>
+          <button class="mode-btn change"     id="btnChange"     onclick="setMode('change')">Change</button>
+        </div>
+
+        <div class="card-title" style="margin-top:12px;">Frequency</div>
+        <div class="input-row">
+          <select class="sel-field" id="selFreq" disabled>
+            <option value="10">10 Hz</option>
+            <option value="25">25 Hz</option>
+            <option value="50">50 Hz</option>
+            <option value="100">100 Hz</option>
+          </select>
+          <button class="action-btn" id="btnSetFreq" onclick="doSetFrequency()" disabled>Set</button>
+        </div>
+      </div>
+
+      <!-- Avg & Quality -->
+      <div class="card">
+        <div class="readout-row">
+          <span class="readout-label">Avg Value :</span>
+          <div class="readout-val" id="avgValue">—</div>
+          <span class="readout-label">Quality :</span>
+          <div class="readout-val" id="qualityVal">—</div>
+        </div>
+      </div>
+
+    </div><!-- end settings -->
+
+    <!-- LINE STATUS LEGEND -->
+    <div class="legend-panel">
+      <div class="legend-title">Line Status</div>
+      <div class="legend-item">
+        <div class="legend-dot green"></div>
+        <span class="legend-label">Detected</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot red"></div>
+        <span class="legend-label">Undetected</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot gray"></div>
+        <span class="legend-label">Unknown</span>
+      </div>
+    </div>
+
+  </div><!-- end main-row -->
+
+  <a class="back-link" href="index.html">&#8592; Kembali ke Dashboard</a>
+
+  <script>
+    // ─────────────────────────────────────────────
+    // CONFIG
+    // ─────────────────────────────────────────────
+    const API = {
+      BASE:    '',
+      STATUS:  '/api/magnetic/status',
+      CMD:     '/api/magnetic/cmd',
+      LOGS:    '/api/magnetic/logs',
+    };
+
+    const SENSOR_COUNT = 16;
+
+    // ─────────────────────────────────────────────
+    // BUILD DOT ROW
+    // ─────────────────────────────────────────────
+    function buildDots() {
+      const row = document.getElementById('dotRow');
+      row.innerHTML = '';
+      for (let i = 1; i <= SENSOR_COUNT; i++) {
+        const item = document.createElement('div');
+        item.className = 'dot-item';
+        item.innerHTML = `
+          <div class="dot unknown" id="dot${i}"></div>
+          <span class="dot-label">P ${i}</span>
+        `;
+        row.appendChild(item);
+      }
+    }
+
+    function updateDots(activePoints) {
+      // activePoints: array of point numbers that are detected (1-based)
+      const set = new Set(activePoints || []);
+      for (let i = 1; i <= SENSOR_COUNT; i++) {
+        const d = document.getElementById(`dot${i}`);
+        if (!d) continue;
+        if (set.size === 0) {
+          // No data yet → unknown
+          d.className = 'dot unknown';
+        } else if (set.has(i)) {
+          d.className = 'dot detected';
+        } else {
+          d.className = 'dot undetected';
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // OUTPUT MODE
+    // ─────────────────────────────────────────────
+    let currentMode = 'response';
+
+    function setMode(mode) {
+      currentMode = mode;
+      ['response','continuous','change'].forEach(m => {
+        const btn = document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1));
+        if (btn) btn.classList.toggle('active', m === mode);
+      });
+
+      // Frequency hanya aktif saat continuous
+      const isCont = mode === 'continuous';
+      document.getElementById('selFreq').disabled   = !isCont;
+      document.getElementById('btnSetFreq').disabled = !isCont;
+
+      // Kirim ke API
+      sendCmd({ action: 'set_mode', mode });
+    }
+
+    // ─────────────────────────────────────────────
+    // ACTIONS
+    // ─────────────────────────────────────────────
+    async function sendCmd(payload) {
+      try {
+        const res  = await fetch(API.BASE + API.CMD, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        addLog(payload.action, JSON.stringify(payload), data.ack || 'sent');
+        return data;
+      } catch (e) {
+        addLog('ERR', JSON.stringify(payload), 'koneksi gagal');
+      }
+    }
+
+    async function doReadAddress() {
+      try {
+        const res  = await fetch(API.BASE + API.STATUS);
+        const data = await res.json();
+        const addr = data.address ?? '?';
+        document.getElementById('inpAddress').value = addr;
+        addLog('READ_ADDR', 'read address', `Address: ${addr}`);
+      } catch {
+        addLog('ERR', 'read address', 'koneksi gagal');
+      }
+    }
+
+    function doWriteAddress() {
+      const val = parseInt(document.getElementById('inpAddress').value);
+      if (isNaN(val) || val < 1 || val > 254) {
+        addLog('ERR', 'set address', 'Address harus 1~254');
+        return;
+      }
+      sendCmd({ action: 'set_address', address: val });
+    }
+
+    function doWriteBaudrate() {
+      const baud = parseInt(document.getElementById('selBaudrate').value);
+      sendCmd({ action: 'set_baudrate', baudrate: baud });
+    }
+
+    function doSetFrequency() {
+      if (currentMode !== 'continuous') {
+        addLog('ERR', 'set freq', 'Frequency hanya bisa diset saat mode Continuous');
+        return;
+      }
+      const freq = parseInt(document.getElementById('selFreq').value);
+      sendCmd({ action: 'set_frequency', frequency: freq });
+    }
+
+    // ─────────────────────────────────────────────
+    // FETCH STATUS
+    // Response shape:
+    // {
+    //   connected: bool,
+    //   address: int,
+    //   active_points: [1,2,...],  // 1-based
+    //   active_count: int,
+    //   line_detected: bool,
+    //   median_value: float,
+    //   quality: str,              // NO_LINE | GOOD | WIDE_LINE | TOO_MANY_POINTS
+    //   lateral_error_mm: float | null,
+    //   output_mode: str,          // response | continuous | change
+    //   position_mask: int,
+    // }
+    // ─────────────────────────────────────────────
+    async function fetchStatus() {
+      const banner   = document.getElementById('connBanner');
+      const connText = document.getElementById('connText');
+      try {
+        const res  = await fetch(API.BASE + API.STATUS);
+        const d    = await res.json();
+
+        // Connection
+        if (d.connected) {
+          banner.className = 'conn-banner ok';
+          banner.style.background = '#fff';
+          connText.textContent = 'Connected – CCF Magnetic Sensor';
+          document.querySelector('.conn-indicator').style.background = '#22C55E';
+        } else {
+          banner.className = 'conn-banner err';
+          connText.textContent = 'Disconnected';
+          document.querySelector('.conn-indicator').style.background = '#EF4444';
+        }
+
+        // Dots
+        if (d.connected) {
+          updateDots(d.active_points ?? []);
+        }
+
+        // Avg value & quality
+        const avgEl  = document.getElementById('avgValue');
+        const qualEl = document.getElementById('qualityVal');
+
+        if (d.median_value !== undefined) {
+          avgEl.textContent = d.median_value.toFixed(1);
+        }
+        if (d.quality) {
+          qualEl.textContent = d.quality;
+          qualEl.style.color = {
+            'GOOD':            '#15803D',
+            'NO_LINE':         '#6B7280',
+            'WIDE_LINE':       '#D97706',
+            'TOO_MANY_POINTS': '#DC2626',
+          }[d.quality] ?? '#111';
+        }
+
+        // Sync output mode button
+        if (d.output_mode && d.output_mode !== currentMode) {
+          setMode(d.output_mode);
+        }
+
+      } catch {
+        connText.textContent = 'API tidak terjangkau';
+        document.querySelector('.conn-indicator').style.background = '#9CA3AF';
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // FETCH LOGS
+    // Response shape:
+    // [ { ts_display, tag, msg, level } ]
+    // ─────────────────────────────────────────────
+    async function fetchLogs() {
+      try {
+        const res  = await fetch(API.BASE + API.LOGS + '?limit=20');
+        const logs = await res.json();
+        if (!logs.length) return;
+        renderLogs(logs);
+      } catch {}
+    }
+
+    function renderLogs(logs) {
+      const container = document.getElementById('logContent');
+      container.innerHTML = logs.map(l => {
+        const lvl = (l.level || 'info').toLowerCase();
+        const cls = lvl === 'error' ? 'log-err' : lvl === 'ok' ? 'log-ok' : 'log-info';
+        return `<div class="log-line">
+          <span class="log-ts">[${escHtml(l.ts_display || l.ts || '')}]</span>
+          <span class="log-tag">${escHtml(l.tag || 'MAG')}</span>
+          <span class="log-msg ${cls}">${escHtml(l.msg || '')}</span>
+        </div>`;
+      }).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function addLog(tag, detail, result) {
+      const now  = new Date().toLocaleTimeString('id-ID');
+      const isErr = result && result.toLowerCase().startsWith('error');
+      const isOk  = result && result.toLowerCase() === 'ok';
+      const cls   = isErr ? 'log-err' : isOk ? 'log-ok' : 'log-info';
+      const cont  = document.getElementById('logContent');
+      // Remove placeholder
+      if (cont.querySelector('.log-info:only-child')) cont.innerHTML = '';
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `
+        <span class="log-ts">[${now}]</span>
+        <span class="log-tag">${escHtml(tag.toUpperCase())}</span>
+        <span class="log-msg ${cls}">${escHtml(detail)} → ${escHtml(result)}</span>
+      `;
+      cont.appendChild(line);
+      cont.scrollTop = cont.scrollHeight;
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ─────────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────────
+    buildDots();
+    fetchStatus();
+    fetchLogs();
+    setInterval(fetchStatus, 300);   // 3 Hz — dot update cepat
+    setInterval(fetchLogs,   3000);  // 1/3 Hz — log update lambat
+  </script>
+</body>
+</html>

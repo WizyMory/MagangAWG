@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modbus RTU Relay – AMR 25</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── LAYOUT ── */
+    .main-layout {
+      display: flex;
+      gap: 28px;
+      align-items: flex-start;
+    }
+
+    .left-col { flex: 1; min-width: 0; }
+
+    /* ── CONNECTION BANNER ── */
+    .conn-banner {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--white);
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: .9rem;
+      font-weight: 800;
+      box-shadow: 0 3px 0 #ddd;
+      margin-bottom: 24px;
+      animation: fade-in-up .3s ease both;
+    }
+
+    .conn-indicator {
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .conn-banner.ok   .conn-indicator { background: var(--green-light); animation: pulse-green 1.8s infinite; }
+    .conn-banner.err  .conn-indicator { background: var(--red-light); }
+    .conn-banner.wait .conn-indicator { background: #9CA3AF; }
+
+    /* ── CHANNEL GRID ── */
+    .ch-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-bottom: 26px;
+      animation: fade-in-up .35s ease .05s both;
+    }
+
+    .ch-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ch-btn {
+      width: 100%;
+      padding: 15px 8px;
+      border: none;
+      border-radius: var(--radius-btn);
+      font-family: var(--font-main);
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: var(--white);
+      cursor: pointer;
+      letter-spacing: .06em;
+      transition: transform .1s, filter .15s;
+      position: relative;
+      outline: none;
+    }
+
+    .ch-btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .ch-btn.on  { background: var(--green-light); box-shadow: 0 5px 0 var(--green-shadow); }
+    .ch-btn.off { background: var(--red-light);   box-shadow: 0 5px 0 var(--red-shadow); }
+
+    .ch-btn:not(:disabled):hover  { filter: brightness(1.08); transform: translateY(-2px); }
+    .ch-btn:not(:disabled):active { transform: translateY(3px); box-shadow: 0 2px 0 var(--green-shadow); }
+    .ch-btn.off:not(:disabled):active { box-shadow: 0 2px 0 var(--red-shadow); }
+
+    /* spinner inside btn when loading */
+    .ch-btn.loading::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 18px; height: 18px;
+      margin: -9px 0 0 -9px;
+      border: 3px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .ch-label {
+      font-size: 1rem;
+      font-weight: 900;
+      color: var(--text-dark);
+    }
+
+    /* ── RIGHT COL – ALL CH ── */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      animation: fade-in-up .35s ease .1s both;
+    }
+
+    .all-ch-btn {
+      width: 120px;
+      height: 110px;
+      border: none;
+      border-radius: 18px;
+      font-family: var(--font-main);
+      font-size: 1.55rem;
+      font-weight: 900;
+      color: var(--white);
+      cursor: pointer;
+      letter-spacing: .06em;
+      transition: transform .1s, filter .15s;
+      outline: none;
+    }
+
+    .all-ch-btn.on  { background: var(--green-light); box-shadow: 0 6px 0 var(--green-shadow); }
+    .all-ch-btn.off { background: var(--red-light);   box-shadow: 0 6px 0 var(--red-shadow); }
+
+    .all-ch-btn:hover  { filter: brightness(1.08); transform: translateY(-2px); }
+    .all-ch-btn:active { transform: translateY(4px); }
+
+    .all-ch-label {
+      font-size: 1rem;
+      font-weight: 900;
+      color: var(--text-dark);
+    }
+
+    /* ── LOG AREA ── */
+    .log-wrapper {
+      background: var(--gray-log);
+      border-radius: 14px;
+      padding: 16px 18px;
+      min-height: 170px;
+      max-height: 200px;
+      overflow: hidden;
+      position: relative;
+      border: 2px solid #3a3a3a;
+      animation: fade-in-up .4s ease .15s both;
+    }
+
+    .log-lines {
+      font-family: var(--font-mono);
+      font-size: .78rem;
+      color: #D1FAE5;
+      line-height: 1.7;
+      overflow: hidden;
+      max-height: 148px;
+    }
+
+    .log-line { display: flex; gap: 10px; }
+    .log-ts   { color: #6EE7B7; flex-shrink: 0; }
+    .log-ch   { color: #FCD34D; flex-shrink: 0; min-width: 40px; }
+    .log-msg  { color: #E5E7EB; }
+    .log-msg.err { color: #FCA5A5; }
+    .log-msg.ok  { color: #86EFAC; }
+
+    .detail-link {
+      position: absolute;
+      bottom: 12px; right: 16px;
+      color: #93C5FD;
+      font-size: .82rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      text-decoration: underline;
+      transition: color .15s;
+    }
+    .detail-link:hover { color: #BFDBFE; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-brand">
+      <svg class="logo-svg" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="30,3 57,51 3,51" fill="none" stroke="var(--blue-logo)" stroke-width="4.5" stroke-linejoin="round"/>
+        <polygon points="30,15 49,47 11,47" fill="var(--blue-logo)" opacity=".15"/>
+        <line x1="19" y1="35" x2="41" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="30" y1="17" x2="19" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="30" y1="17" x2="41" y2="35" stroke="var(--blue-logo)" stroke-width="3.5" stroke-linecap="round"/>
+      </svg>
+      <div class="brand-text">
+        <div class="company">PT. Adhikara Wiyasa Gani</div>
+        <div class="subtitle">Modbus RTU Relay</div>
+      </div>
+    </div>
+    <div class="header-amr">AMR 25<br>Teknisi Kontrol</div>
+  </header>
+
+  <!-- CONNECTION BANNER -->
+  <div class="conn-banner wait" id="connBanner">
+    <div class="conn-indicator"></div>
+    <span id="connText">Menghubungkan…</span>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-layout">
+    <div class="left-col">
+
+      <!-- Channel Grid -->
+      <div class="ch-grid" id="chGrid"></div>
+
+      <!-- Log Area -->
+      <div class="log-wrapper">
+        <div class="log-lines" id="logLines">
+          <div class="log-line"><span class="log-msg" style="color:#6b7280">Menunggu data log…</span></div>
+        </div>
+        <span class="detail-link" onclick="window.location.href='log.html'">! Detail</span>
+      </div>
+
+      <a class="back-link" href="index.html">&#8592; Kembali ke Dashboard</a>
+    </div>
+
+    <!-- ALL CH -->
+    <div class="right-col">
+      <button class="all-ch-btn on" id="allChBtn" onclick="handleAllCh()">ON</button>
+      <span class="all-ch-label">ALL CH</span>
+    </div>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────
+    // CONFIG
+    // ─────────────────────────────────────────────
+    const API = {
+      BASE:   '',
+      STATUS: '/api/relay/status',   // GET → { connected, modbus_fault, relay_state:[0,1,...] }
+      CMD:    '/api/relay/cmd',      // POST { command: "3 ON" | "ALL OFF" } → { ack: "OK"|"ERROR..." }
+      LOGS:   '/api/relay/logs',     // GET → [ { ts, channel, state, note }, ... ]
+    };
+
+    const CH_COUNT = 8;
+    let relayState = new Array(CH_COUNT).fill(false); // false=OFF, true=ON
+    let allChState = true;   // reflects ALL CH button
+    let busy       = false;
+
+    // ─────────────────────────────────────────────
+    // BUILD CHANNEL GRID
+    // ─────────────────────────────────────────────
+    function buildGrid() {
+      const grid = document.getElementById('chGrid');
+      grid.innerHTML = '';
+      for (let i = 0; i < CH_COUNT; i++) {
+        const isOn = relayState[i];
+        const item = document.createElement('div');
+        item.className = 'ch-item';
+        item.innerHTML = `
+          <button class="ch-btn ${isOn ? 'on' : 'off'}" id="ch${i}" onclick="handleCh(${i})">
+            ${isOn ? 'ON' : 'OFF'}
+          </button>
+          <span class="ch-label">CH ${i + 1}</span>
+        `;
+        grid.appendChild(item);
+      }
+    }
+
+    function updateGrid() {
+      for (let i = 0; i < CH_COUNT; i++) {
+        const btn = document.getElementById(`ch${i}`);
+        if (!btn) continue;
+        const isOn = relayState[i];
+        btn.className = `ch-btn ${isOn ? 'on' : 'off'}`;
+        btn.textContent = isOn ? 'ON' : 'OFF';
+      }
+      // update ALL CH btn
+      const allOn = relayState.every(s => s);
+      const allBtn = document.getElementById('allChBtn');
+      allBtn.className = `all-ch-btn ${allOn ? 'on' : 'off'}`;
+      allBtn.textContent = allOn ? 'ON' : 'OFF';
+    }
+
+    // ─────────────────────────────────────────────
+    // SEND COMMAND → FastAPI → ROS2 topic relay/cmd
+    // ─────────────────────────────────────────────
+    async function sendCmd(command) {
+      try {
+        const res  = await fetch(API.BASE + API.CMD, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command }),
+        });
+        const data = await res.json();
+        return data.ack; // "OK" or "ERROR ..."
+      } catch {
+        return 'ERROR koneksi ke API';
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // CHANNEL TOGGLE
+    // ─────────────────────────────────────────────
+    async function handleCh(idx) {
+      if (busy) return;
+      busy = true;
+
+      const btn = document.getElementById(`ch${idx}`);
+      btn.disabled = true;
+      btn.classList.add('loading');
+      btn.textContent = '';
+
+      const newState = !relayState[idx];
+      const cmd      = `${idx} ${newState ? 'ON' : 'OFF'}`;
+      const ack      = await sendCmd(cmd);
+
+      if (ack === 'OK') {
+        relayState[idx] = newState;
+      }
+
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      updateGrid();
+      busy = false;
+    }
+
+    // ─────────────────────────────────────────────
+    // ALL CH TOGGLE
+    // ─────────────────────────────────────────────
+    async function handleAllCh() {
+      if (busy) return;
+      busy = true;
+
+      const allBtn = document.getElementById('allChBtn');
+      allBtn.disabled = true;
+
+      const allOn  = relayState.every(s => s);
+      const newVal = !allOn;
+      const cmd    = `ALL ${newVal ? 'ON' : 'OFF'}`;
+      const ack    = await sendCmd(cmd);
+
+      if (ack === 'OK') {
+        relayState.fill(newVal);
+      }
+
+      allBtn.disabled = false;
+      updateGrid();
+      busy = false;
+    }
+
+    // ─────────────────────────────────────────────
+    // FETCH RELAY STATUS (polling)
+    // Response shape:
+    // {
+    //   "connected": true,
+    //   "modbus_fault": false,
+    //   "relay_state": [1, 0, 1, 1, 0, 0, 1, 0]
+    // }
+    // ─────────────────────────────────────────────
+    async function fetchStatus() {
+      const banner   = document.getElementById('connBanner');
+      const connText = document.getElementById('connText');
+
+      try {
+        const res  = await fetch(API.BASE + API.STATUS);
+        const data = await res.json();
+
+        if (data.modbus_fault) {
+          banner.className  = 'conn-banner err';
+          connText.textContent = 'Modbus FAULT – Sedang recovery…';
+        } else if (data.connected) {
+          banner.className  = 'conn-banner ok';
+          connText.textContent = 'Connected';
+        } else {
+          banner.className  = 'conn-banner err';
+          connText.textContent = 'Disconnected';
+        }
+
+        if (Array.isArray(data.relay_state) && !busy) {
+          relayState = data.relay_state.map(v => !!v);
+          updateGrid();
+        }
+
+      } catch {
+        banner.className  = 'conn-banner err';
+        connText.textContent = 'API tidak terjangkau';
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // FETCH LOGS (polling)
+    // Response shape:
+    // [
+    //   { "ts": "12:01:33", "channel": 2, "state": "ON",  "note": "OK" },
+    //   { "ts": "12:01:28", "channel": -1,"state": "OFF", "note": "ALL" },
+    //   { "ts": "12:01:10", "channel": 0, "state": "ON",  "note": "ERROR timeout" },
+    // ]
+    // ─────────────────────────────────────────────
+    async function fetchLogs() {
+      try {
+        const res  = await fetch(API.BASE + API.LOGS + '?limit=8');
+        const logs = await res.json();
+        renderLogs(logs);
+      } catch {
+        // keep existing log lines
+      }
+    }
+
+    function renderLogs(logs) {
+      const container = document.getElementById('logLines');
+      if (!logs.length) {
+        container.innerHTML = '<div class="log-line"><span class="log-msg" style="color:#6b7280">Belum ada aktivitas.</span></div>';
+        return;
+      }
+      container.innerHTML = logs.map(l => {
+        const isErr   = l.note && l.note.startsWith('ERROR');
+        const chLabel = l.channel === -1 ? 'ALL' : `CH${l.channel + 1}`;
+        const msgCls  = isErr ? 'err' : 'ok';
+        const tsLabel = l.ts_display || l.ts || '-';
+        return `
+          <div class="log-line">
+            <span class="log-ts">[${tsLabel}]</span>
+            <span class="log-ch">${chLabel}</span>
+            <span class="log-msg ${msgCls}">${l.state} – ${l.note}</span>
+          </div>`;
+      }).join('');
+    }
+
+    // ─────────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────────
+    buildGrid();
+    fetchStatus();
+    fetchLogs();
+    setInterval(fetchStatus, 2000);
+    setInterval(fetchLogs,   2500);
+  </script>
+</body>
+</html>
