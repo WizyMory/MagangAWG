@@ -54,8 +54,17 @@ def generate_launch_description():
             'map_topic': 'map',
             'pose_topic': 'amcl_pose',
             'path_topic': 'plan',
+            'scan_topic': 'scan',
             'initial_pose_topic': 'initialpose',
             'navigate_action': 'navigate_to_pose',
+            'compute_path_action': 'compute_path_to_pose',
+            'goal_send_mode': 'topic',
+            'cancel_goal_service': '/navigate_to_pose/_action/cancel_goal',
+            'motor_enable_service': '/amr_motor/enable',
+            'clear_local_costmap_service': '/local_costmap/clear_entirely_local_costmap',
+            'clear_global_costmap_service': '/global_costmap/clear_entirely_global_costmap',
+            'goal_pose_topic': 'goal_pose',
+            'pose_timeout': 10.0,
         }]
     )
 
