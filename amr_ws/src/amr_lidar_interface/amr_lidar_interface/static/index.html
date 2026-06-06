@@ -16,6 +16,7 @@
       --green: #22c55e;
       --red: #ef4444;
       --blue: #2563eb;
+      --orange: #f59e0b;
       --canvas: #101826;
       --font: Arial, Helvetica, sans-serif;
       --mono: "Courier New", monospace;
@@ -77,7 +78,7 @@
 
     .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 280px;
+      grid-template-columns: minmax(0, 1fr) 340px;
       gap: 22px;
       align-items: start;
     }
@@ -143,6 +144,104 @@
       box-shadow: 0 3px 0 var(--line);
     }
 
+    .log-panel {
+      padding: 14px;
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 3px 0 var(--line);
+    }
+
+    .log-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .log-title {
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .log-count,
+    .log-file {
+      margin-top: 5px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: .74rem;
+      overflow-wrap: anywhere;
+    }
+
+    .log-badge {
+      min-width: 74px;
+      padding: 6px 8px;
+      border-radius: 7px;
+      background: #e5e7eb;
+      color: var(--ink);
+      font-size: .68rem;
+      font-weight: 900;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .log-badge.running { background: #dcfce7; color: #166534; }
+    .log-badge.warning { background: #fef3c7; color: #92400e; }
+    .log-badge.error { background: #fee2e2; color: #991b1b; }
+
+    .log-list {
+      display: grid;
+      gap: 9px;
+      max-height: 330px;
+      margin-top: 12px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .log-row {
+      border-left: 4px solid var(--blue);
+      border-radius: 7px;
+      padding: 9px 10px;
+      background: #f8fafc;
+    }
+
+    .log-row.running { border-left-color: var(--green); }
+    .log-row.warning { border-left-color: var(--orange); }
+    .log-row.error { border-left-color: var(--red); }
+
+    .log-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: .7rem;
+    }
+
+    .log-level {
+      color: var(--ink);
+      font-family: var(--font);
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .log-message {
+      margin-top: 6px;
+      color: var(--ink);
+      font-size: .82rem;
+      font-weight: 700;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .log-empty {
+      padding: 12px;
+      border-radius: 7px;
+      background: #f8fafc;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
     @keyframes pulse {
       0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .45); }
       50% { box-shadow: 0 0 0 7px rgba(34, 197, 94, 0); }
@@ -196,7 +295,21 @@
         <div class="metric-label">Update</div>
         <div class="metric-value" id="updateTime">-</div>
       </div>
+      <section class="log-panel">
+        <div class="log-head">
+          <div>
+            <div class="log-title">Timeline</div>
+            <div class="log-count" id="logCount">0 event</div>
+          </div>
+          <div class="log-badge" id="logBadge">-</div>
+        </div>
+        <div class="log-file" id="logFile">-</div>
+        <div class="log-list" id="logList">
+          <div class="log-empty">Belum ada event</div>
+        </div>
+      </section>
       <a class="api-link" href="/api/lidar/scan">API JSON</a>
+      <a class="api-link" href="/api/lidar/logs">API Log</a>
     </aside>
   </div>
 
@@ -285,6 +398,61 @@
         new Date().toLocaleTimeString('id-ID');
     }
 
+    function escapeHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function setLogBadge(level) {
+      const badge = document.getElementById('logBadge');
+      const knownLevels = ['running', 'warning', 'error'];
+      const normalizedLevel = String(level || '').toLowerCase();
+      const safeLevel = knownLevels.includes(normalizedLevel) ? normalizedLevel : '-';
+      badge.className = `log-badge ${safeLevel}`;
+      badge.textContent = safeLevel;
+    }
+
+    function renderLogs(payload) {
+      const events = Array.isArray(payload.events) ? payload.events : [];
+      const recentEvents = [...events].reverse();
+      const list = document.getElementById('logList');
+
+      document.getElementById('logFile').textContent = payload.log_file || '-';
+      document.getElementById('logCount').textContent = `${events.length} event`;
+
+      if (!recentEvents.length) {
+        setLogBadge('-');
+        list.innerHTML = '<div class="log-empty">Belum ada event</div>';
+        return;
+      }
+
+      setLogBadge(recentEvents[0].level);
+      list.innerHTML = recentEvents.map((event) => {
+        const rawLevel = String(event.level || 'running').toLowerCase();
+        const levelClass = ['running', 'warning', 'error'].includes(rawLevel)
+          ? rawLevel
+          : 'running';
+        const level = escapeHtml(rawLevel);
+        const tag = escapeHtml(event.tag || '-');
+        const time = escapeHtml(event.ts_display || event.ts || '-');
+        const message = escapeHtml(event.message || event.msg || '-');
+
+        return `
+          <div class="log-row ${levelClass}">
+            <div class="log-meta">
+              <span>${time}</span>
+              <span class="log-level">${level} / ${tag}</span>
+            </div>
+            <div class="log-message">${message}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
     async function fetchScan() {
       try {
         const res = await fetch('/api/lidar/scan');
@@ -298,9 +466,22 @@
       }
     }
 
+    async function fetchLogs() {
+      try {
+        const res = await fetch('/api/lidar/logs?limit=80');
+        const payload = await res.json();
+        renderLogs(payload);
+      } catch (err) {
+        console.error(err);
+        setLogBadge('error');
+      }
+    }
+
     window.addEventListener('resize', fetchScan);
     fetchScan();
+    fetchLogs();
     setInterval(fetchScan, 200);
+    setInterval(fetchLogs, 1000);
   </script>
 </body>
 </html>
