@@ -140,6 +140,18 @@
       box-shadow: 0 3px 0 #b91c1c;
     }
 
+    button.motor-on {
+      color: #ffffff;
+      background: var(--green);
+      box-shadow: 0 3px 0 #15803d;
+    }
+
+    button.motor-off {
+      color: #ffffff;
+      background: #334155;
+      box-shadow: 0 3px 0 #1e293b;
+    }
+
     button:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
 
     .metric {
@@ -200,6 +212,9 @@
       <div class="toolbar">
         <button id="initialBtn" class="active" onclick="setMode('initial')">Initial Pose</button>
         <button id="goalBtn" onclick="setMode('goal')">Goal Pose</button>
+        <button class="motor-on" onclick="setMotor(true)">Enable Motor</button>
+        <button class="motor-off" onclick="setMotor(false)">Disable Motor</button>
+        <button onclick="clearCostmaps()">Clear Costmaps</button>
         <button class="danger" onclick="cancelGoal()">Cancel Goal</button>
       </div>
 
@@ -210,6 +225,22 @@
       <div class="metric">
         <div class="metric-label">Goal Status</div>
         <div class="metric-value" id="goalStatus">idle</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Motor</div>
+        <div class="metric-value" id="motorStatus">unknown</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Laser</div>
+        <div class="metric-value" id="laserStatus">waiting</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Path</div>
+        <div class="metric-value" id="pathStatus">idle</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Costmap</div>
+        <div class="metric-value" id="costmapStatus">unknown</div>
       </div>
       <div class="metric">
         <div class="metric-label">Robot Pose</div>
@@ -352,6 +383,17 @@
       ctx.stroke();
     }
 
+    function drawLaser(points) {
+      if (!points || !points.length || !mapData) return;
+      ctx.fillStyle = '#06b6d4';
+      for (const point of points) {
+        const p = worldToCanvas(point);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
     function drawPreview() {
       if (!dragStart || !dragEnd) return;
       const start = worldToCanvas(dragStart);
@@ -381,6 +423,7 @@
         mapData.height * transform.scale
       );
 
+      drawLaser(state.laser_points);
       drawPath(state.path, '#2563eb', 3);
       drawArrow(state.initial_pose, '#f59e0b', 10);
       drawArrow(state.goal_pose, '#ef4444', 12);
@@ -426,7 +469,10 @@
       if (mode === 'initial') {
         await postJson('/api/nav/initial_pose', payload);
       } else {
-        await postJson('/api/nav/goal', payload);
+        const result = await postJson('/api/nav/goal', payload);
+        if (!result.ok) {
+          state.goal_status = result.status || 'goal_error';
+        }
       }
       await fetchState();
     });
@@ -445,6 +491,22 @@
       await fetchState();
     }
 
+    async function clearCostmaps() {
+      const res = await fetch('/api/nav/clear_costmaps', { method: 'POST' });
+      const result = await res.json();
+      state.costmap_message = result.ok ? 'cleared' : 'partial';
+      state.path_status = result.ok ? 'cleared' : state.path_status;
+      updateMetrics();
+      await fetchState();
+    }
+
+    async function setMotor(enabled) {
+      const result = await postJson('/api/motor/enable', { enabled });
+      state.motor_enabled = Boolean(result.enabled);
+      state.motor_message = result.message || '';
+      updateMetrics();
+    }
+
     function formatPose(pose) {
       if (!pose) return '-';
       const deg = (pose.yaw || 0) * 180 / Math.PI;
@@ -458,6 +520,17 @@
       document.getElementById('robotText').textContent =
         connected ? 'Robot connected' : 'Robot disconnected';
       document.getElementById('goalStatus').textContent = state.goal_status || 'idle';
+      document.getElementById('motorStatus').textContent =
+        `${state.motor_enabled ? 'enabled' : 'disabled'} ${state.motor_message ? '- ' + state.motor_message : ''}`;
+      if (state.laser_connected) {
+        const count = state.laser_points ? state.laser_points.length : 0;
+        document.getElementById('laserStatus').textContent = `${count} pts (${state.laser_frame || 'scan'})`;
+      } else {
+        document.getElementById('laserStatus').textContent =
+          state.laser_error ? `tf error: ${state.laser_frame || 'scan'}` : 'waiting';
+      }
+      document.getElementById('pathStatus').textContent = state.path_status || 'idle';
+      document.getElementById('costmapStatus').textContent = state.costmap_message || 'unknown';
       document.getElementById('robotPose').textContent = formatPose(state.robot_pose);
       document.getElementById('goalPose').textContent = formatPose(state.goal_pose);
       const distance = state.feedback ? Number(state.feedback.distance_remaining || 0) : 0;
