@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AMR Operating Robot</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --ink: #050505;
+      --muted: #4d535a;
+      --panel: #b7b7b7;
+      --panel-dark: #777978;
+      --yellow: #ffca18;
+      --yellow-soft: #fff7dc;
+      --green: #06c167;
+      --red: #f3262c;
+      --navy: #263448;
+      --shadow: 0 16px 26px rgba(0, 0, 0, 0.24);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      color: var(--ink);
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    .app {
+      width: min(1500px, calc(100vw - 44px));
+      margin: 18px auto 28px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 40px;
+      line-height: 1.05;
+      font-weight: 900;
+    }
+
+    .connection-pill {
+      min-width: 220px;
+      padding: 12px 18px;
+      border-radius: 8px;
+      background: #f2f4f6;
+      box-shadow: 0 3px 0 rgba(0, 0, 0, 0.08);
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .connection-pill::before {
+      content: "";
+      display: inline-block;
+      width: 11px;
+      height: 11px;
+      margin-right: 10px;
+      border-radius: 50%;
+      background: var(--red);
+      vertical-align: -1px;
+    }
+
+    .connection-pill.connected::before {
+      background: var(--green);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(560px, 1fr) minmax(520px, 620px);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .map-title {
+      margin: 0 0 2px 4px;
+      font-size: 26px;
+      line-height: 1.15;
+      font-weight: 900;
+    }
+
+    .map-frame {
+      position: relative;
+      width: 100%;
+      min-height: 570px;
+      height: min(72vh, 720px);
+      background: var(--panel-dark);
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    }
+
+    #mapCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .side {
+      display: grid;
+      gap: 18px;
+    }
+
+    .coord-panel {
+      min-height: 136px;
+      padding: 18px 18px 14px;
+      border-radius: 30px;
+      background: var(--yellow);
+      box-shadow: var(--shadow);
+    }
+
+    .coord-title {
+      margin: 0 0 2px;
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .coord-grid {
+      display: grid;
+      grid-template-columns: auto 1fr auto 1fr auto 106px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .coord-grid label {
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .coord-grid input {
+      min-width: 0;
+      height: 36px;
+      border: 0;
+      border-radius: 0;
+      background: rgba(255, 255, 255, 0.82);
+      padding: 4px 10px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .name-row {
+      display: grid;
+      grid-template-columns: auto minmax(150px, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .name-row label {
+      justify-self: end;
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .name-row input {
+      height: 36px;
+      border: 0;
+      background: rgba(255, 255, 255, 0.82);
+      padding: 4px 12px;
+      font-weight: 800;
+    }
+
+    .add-btn {
+      min-width: 144px;
+      height: 38px;
+      border-radius: 19px;
+      background: rgba(255, 255, 255, 0.86);
+      font-size: 20px;
+      font-weight: 700;
+      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+    }
+
+    .operator-grid {
+      display: grid;
+      grid-template-columns: 1fr 292px;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .stations {
+      display: grid;
+      gap: 14px;
+    }
+
+    .station-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(118px, 132px));
+      gap: 18px;
+      align-items: start;
+    }
+
+    .station-card {
+      position: relative;
+      width: 132px;
+      height: 130px;
+      border-radius: 16px;
+      background: #b8b8b8;
+      box-shadow: var(--shadow);
+      display: grid;
+      place-items: center;
+      padding: 12px;
+      text-align: center;
+      font-size: 27px;
+      line-height: 1.05;
+      font-weight: 900;
+      overflow: hidden;
+    }
+
+    .station-card.active {
+      background: var(--green);
+    }
+
+    .station-card.placeholder {
+      background: #c9c9c9;
+      color: #080808;
+      cursor: default;
+    }
+
+    .station-name {
+      overflow-wrap: anywhere;
+    }
+
+    .station-delete {
+      position: absolute;
+      right: 7px;
+      top: 7px;
+      min-width: 38px;
+      height: 26px;
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.86);
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 900;
+      opacity: 0;
+      transition: opacity 120ms ease;
+    }
+
+    .station-card:hover .station-delete,
+    .station-card:focus-within .station-delete {
+      opacity: 1;
+    }
+
+    .station-meta {
+      min-height: 62px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #d9d9d9;
+      font-size: 14px;
+      font-weight: 800;
+      color: #202020;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+    }
+
+    .function-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .function-panel {
+      padding: 12px 18px 14px;
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .function-title {
+      margin: 0 0 2px;
+      font-size: 27px;
+      line-height: 1.05;
+      font-weight: 900;
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px 16px;
+      align-items: center;
+    }
+
+    .fn-btn {
+      min-height: 56px;
+      border-radius: 18px;
+      background: #ffe889;
+      padding: 8px 10px;
+      font-weight: 900;
+      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+    }
+
+    .fn-btn.clear {
+      grid-column: 1 / 3;
+      justify-self: center;
+      width: 110px;
+    }
+
+    .motor-btn.enabled {
+      background: var(--green);
+      color: #06130c;
+    }
+
+    .motor-btn.disabled {
+      background: var(--red);
+      color: #ffffff;
+    }
+
+    .estop {
+      width: 100%;
+      min-height: 74px;
+      margin-top: 8px;
+      border-radius: 18px;
+      background: var(--red);
+      color: #000;
+      font-size: 28px;
+      line-height: 1.2;
+      font-weight: 950;
+      box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.16);
+    }
+
+    .status-card {
+      min-height: 82px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      display: grid;
+      align-content: center;
+    }
+
+    .status-card h3 {
+      margin: 0 0 6px;
+      font-size: 25px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .status-card strong {
+      display: block;
+      font-size: 22px;
+      line-height: 1.15;
+      font-weight: 900;
+      overflow-wrap: anywhere;
+    }
+
+    .message-line {
+      min-height: 30px;
+      padding: 6px 4px 0;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--muted);
+    }
+
+    @media (max-width: 1180px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .map-frame {
+        min-height: 520px;
+      }
+
+      .side {
+        max-width: 760px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app {
+        width: min(100vw - 20px, 680px);
+        margin-top: 14px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      h1 {
+        font-size: 34px;
+      }
+
+      .layout,
+      .operator-grid,
+      .coord-grid,
+      .name-row {
+        grid-template-columns: 1fr;
+      }
+
+      .coord-grid label,
+      .name-row label {
+        justify-self: start;
+        font-size: 24px;
+      }
+
+      .add-btn {
+        width: 100%;
+      }
+
+      .station-grid {
+        grid-template-columns: repeat(2, minmax(118px, 1fr));
+      }
+
+      .station-card {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <h1>AMR Operating Robot</h1>
+      <div id="connectionPill" class="connection-pill">Robot disconnected</div>
+    </header>
+
+    <section class="layout">
+      <section class="map-column">
+        <h2 class="map-title">PETA WAREHOUSE</h2>
+        <div class="map-frame">
+          <canvas id="mapCanvas"></canvas>
+        </div>
+      </section>
+
+      <section class="side">
+        <section class="coord-panel">
+          <h2 class="coord-title">Poin Koordinat</h2>
+          <div class="coord-grid">
+            <label for="xInput">X</label>
+            <input id="xInput" type="number" step="0.01" value="0.00">
+            <label for="yInput">Y</label>
+            <input id="yInput" type="number" step="0.01" value="0.00">
+            <label for="yawInput">Yaw</label>
+            <input id="yawInput" type="number" step="1" placeholder="Derajat" value="0">
+          </div>
+          <div class="name-row">
+            <label for="nameInput">Name</label>
+            <input id="nameInput" type="text" maxlength="32" autocomplete="off">
+            <button id="addStationBtn" class="add-btn">Add Stasion</button>
+          </div>
+        </section>
+
+        <section class="operator-grid">
+          <section class="stations">
+            <div id="stationGrid" class="station-grid"></div>
+            <div id="stationMeta" class="station-meta">Stasion: 0 tersimpan</div>
+          </section>
+
+          <section class="function-stack">
+            <section class="function-panel">
+              <h2 class="function-title">Function Button</h2>
+              <div class="button-grid">
+                <button id="initialPoseBtn" class="fn-btn">Inisialisasi<br>Posisi</button>
+                <button id="motorBtn" class="fn-btn motor-btn disabled">Motor<br>Disabled</button>
+                <button id="clearCostmapsBtn" class="fn-btn clear">Bersihkan<br>Jalur</button>
+              </div>
+              <button id="emergencyBtn" class="estop">EMERGENCY<br>STOP</button>
+            </section>
+
+            <section class="status-card">
+              <h3>Goal Status</h3>
+              <strong id="goalStatus">idle</strong>
+            </section>
+            <section class="status-card">
+              <h3>Persentase Batre</h3>
+              <strong id="batteryStatus">-</strong>
+            </section>
+            <div id="messageLine" class="message-line"></div>
+          </section>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const api = {
+      map: '/api/operator/map',
+      state: '/api/operator/state',
+      initialPose: '/api/operator/initial_pose',
+      stations: '/api/operator/stations',
+      motor: '/api/operator/motor',
+      clearCostmaps: '/api/operator/clear_costmaps',
+      emergencyStop: '/api/operator/emergency_stop'
+    };
+
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const xInput = document.getElementById('xInput');
+    const yInput = document.getElementById('yInput');
+    const yawInput = document.getElementById('yawInput');
+    const nameInput = document.getElementById('nameInput');
+    const stationGrid = document.getElementById('stationGrid');
+    const stationMeta = document.getElementById('stationMeta');
+    const connectionPill = document.getElementById('connectionPill');
+    const goalStatus = document.getElementById('goalStatus');
+    const batteryStatus = document.getElementById('batteryStatus');
+    const messageLine = document.getElementById('messageLine');
+    const addStationBtn = document.getElementById('addStationBtn');
+    const initialPoseBtn = document.getElementById('initialPoseBtn');
+    const motorBtn = document.getElementById('motorBtn');
+    const clearCostmapsBtn = document.getElementById('clearCostmapsBtn');
+    const emergencyBtn = document.getElementById('emergencyBtn');
+
+    const model = {
+      map: null,
+      state: {},
+      mapImage: null,
+      mapSignature: '',
+      selected: { x: 0, y: 0, yaw: 0 },
+      dragging: false,
+      dragStart: null,
+      transform: null,
+      busy: false
+    };
+
+    function setMessage(text) {
+      messageLine.textContent = text || '';
+    }
+
+    function deg(rad) {
+      return rad * 180 / Math.PI;
+    }
+
+    function rad(degValue) {
+      return degValue * Math.PI / 180;
+    }
+
+    function canvasYaw(yaw) {
+      return -(yaw || 0);
+    }
+
+    function round(value, digits) {
+      return Number(value || 0).toFixed(digits);
+    }
+
+    function selectedFromInputs() {
+      model.selected.x = Number(xInput.value || 0);
+      model.selected.y = Number(yInput.value || 0);
+      model.selected.yaw = rad(Number(yawInput.value || 0));
+      draw();
+    }
+
+    function pushSelectedToInputs() {
+      xInput.value = round(model.selected.x, 2);
+      yInput.value = round(model.selected.y, 2);
+      yawInput.value = round(deg(model.selected.yaw), 0);
+    }
+
+    function posePayload() {
+      selectedFromInputs();
+      return {
+        x: model.selected.x,
+        y: model.selected.y,
+        yaw: model.selected.yaw
+      };
+    }
+
+    async function requestJson(url, options = {}) {
+      const response = await fetch(url, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options
+      });
+      if (!response.ok) {
+        throw new Error(`${response.status} ${response.statusText}`);
+      }
+      return response.json();
+    }
+
+    async function postJson(url, body) {
+      return requestJson(url, {
+        method: 'POST',
+        body: body === undefined ? undefined : JSON.stringify(body)
+      });
+    }
+
+    async function loadMap() {
+      try {
+        const map = await requestJson(api.map);
+        if (map && map.width > 0 && map.height > 0) {
+          const signature = `${map.width}:${map.height}:${map.resolution}:${map.origin?.x}:${map.origin?.y}`;
+          model.map = map;
+          if (signature !== model.mapSignature) {
+            model.mapSignature = signature;
+            model.mapImage = buildMapImage(map);
+          }
+        }
+      } catch (error) {
+        setMessage(`Map: ${error.message}`);
+      }
+      draw();
+    }
+
+    async function loadState() {
+      try {
+        model.state = await requestJson(api.state);
+        renderStatus();
+        renderStations();
+      } catch (error) {
+        setMessage(`State: ${error.message}`);
+      }
+      draw();
+    }
+
+    function buildMapImage(map) {
+      const offscreen = document.createElement('canvas');
+      offscreen.width = map.width;
+      offscreen.height = map.height;
+      const mapCtx = offscreen.getContext('2d');
+      const image = mapCtx.createImageData(map.width, map.height);
+
+      for (let y = 0; y < map.height; y += 1) {
+        for (let x = 0; x < map.width; x += 1) {
+          const value = map.data[x + y * map.width];
+          const destY = map.height - 1 - y;
+          const idx = (x + destY * map.width) * 4;
+          let shade = 246;
+          if (value < 0) shade = 122;
+          if (value >= 50) shade = 34;
+          image.data[idx] = shade;
+          image.data[idx + 1] = shade;
+          image.data[idx + 2] = shade;
+          image.data[idx + 3] = 255;
+        }
+      }
+
+      mapCtx.putImageData(image, 0, 0);
+      return offscreen;
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.max(1, Math.floor(rect.width * dpr));
+      const height = Math.max(1, Math.floor(rect.height * dpr));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw();
+    }
+
+    function computeTransform() {
+      if (!model.map || !model.map.width || !model.map.height) {
+        model.transform = null;
+        return null;
+      }
+
+      const rect = canvas.getBoundingClientRect();
+      const margin = 14;
+      const usableW = Math.max(1, rect.width - margin * 2);
+      const usableH = Math.max(1, rect.height - margin * 2);
+      const scale = Math.min(usableW / model.map.width, usableH / model.map.height);
+      const drawW = model.map.width * scale;
+      const drawH = model.map.height * scale;
+      const transform = {
+        scale,
+        x: (rect.width - drawW) / 2,
+        y: (rect.height - drawH) / 2,
+        w: drawW,
+        h: drawH
+      };
+      model.transform = transform;
+      return transform;
+    }
+
+    function worldToCanvas(x, y) {
+      const map = model.map;
+      const t = model.transform || computeTransform();
+      if (!map || !t) return null;
+      const mx = (x - map.origin.x) / map.resolution;
+      const my = (y - map.origin.y) / map.resolution;
+      return {
+        x: t.x + mx * t.scale,
+        y: t.y + (map.height - my) * t.scale
+      };
+    }
+
+    function canvasToWorld(px, py) {
+      const map = model.map;
+      const t = model.transform || computeTransform();
+      if (!map || !t) return null;
+      const mx = (px - t.x) / t.scale;
+      const my = map.height - ((py - t.y) / t.scale);
+      return {
+        x: map.origin.x + mx * map.resolution,
+        y: map.origin.y + my * map.resolution
+      };
+    }
+
+    function draw() {
+      const rect = canvas.getBoundingClientRect();
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      ctx.fillStyle = '#777978';
+      ctx.fillRect(0, 0, rect.width, rect.height);
+
+      if (!model.map || !model.mapImage) {
+        ctx.fillStyle = '#f5f5f5';
+        ctx.font = '800 22px system-ui, sans-serif';
+        ctx.fillText('Menunggu map', 24, 44);
+        return;
+      }
+
+      const t = computeTransform();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(model.mapImage, t.x, t.y, t.w, t.h);
+      ctx.imageSmoothingEnabled = true;
+
+      drawLaser();
+      drawPath();
+      drawStationsOnMap();
+      drawRobot();
+      drawSelectedPose();
+
+      ctx.strokeStyle = '#1f2937';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(t.x, t.y, t.w, t.h);
+    }
+
+    function drawLaser() {
+      const points = model.state.laser_points || [];
+      if (!points.length) return;
+
+      ctx.fillStyle = '#00aeca';
+      for (const point of points) {
+        const p = worldToCanvas(point.x, point.y);
+        if (!p) continue;
+        ctx.fillRect(p.x - 1.8, p.y - 1.8, 3.6, 3.6);
+      }
+    }
+
+    function drawPath() {
+      const path = model.state.path || [];
+      if (path.length < 2) return;
+
+      ctx.beginPath();
+      path.forEach((point, index) => {
+        const p = worldToCanvas(point.x, point.y);
+        if (!p) return;
+        if (index === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 3;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+
+    function drawStationsOnMap() {
+      const stations = model.state.stations || [];
+      const currentId = model.state.current_station_id;
+
+      for (const station of stations) {
+        const p = worldToCanvas(station.x, station.y);
+        if (!p) continue;
+        const active = station.id === currentId;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(canvasYaw(station.yaw));
+        ctx.fillStyle = active ? '#06c167' : '#b7b7b7';
+        ctx.strokeStyle = '#111111';
+        ctx.lineWidth = 2;
+        ctx.fillRect(-8, -8, 16, 16);
+        ctx.strokeRect(-8, -8, 16, 16);
+        ctx.beginPath();
+        ctx.moveTo(0, -12);
+        ctx.lineTo(18, 0);
+        ctx.lineTo(0, 12);
+        ctx.closePath();
+        ctx.fillStyle = active ? '#036b3c' : '#555555';
+        ctx.fill();
+        ctx.restore();
+
+        ctx.font = '800 12px system-ui, sans-serif';
+        const label = station.name || 'Station';
+        const width = ctx.measureText(label).width + 10;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.86)';
+        ctx.fillRect(p.x + 10, p.y - 25, width, 20);
+        ctx.fillStyle = '#111111';
+        ctx.fillText(label, p.x + 15, p.y - 10);
+      }
+    }
+
+    function drawRobot() {
+      const pose = model.state.robot_pose;
+      if (!pose) return;
+      const p = worldToCanvas(pose.x, pose.y);
+      if (!p) return;
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(canvasYaw(pose.yaw));
+      ctx.fillStyle = '#20c56b';
+      ctx.strokeStyle = '#0f703d';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(-13, -11);
+      ctx.lineTo(-8, 0);
+      ctx.lineTo(-13, 11);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawSelectedPose() {
+      const p = worldToCanvas(model.selected.x, model.selected.y);
+      if (!p) return;
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(canvasYaw(model.selected.yaw));
+      ctx.fillStyle = '#ffca18';
+      ctx.strokeStyle = '#111111';
+      ctx.lineWidth = 2;
+      ctx.fillRect(-8, -8, 16, 16);
+      ctx.strokeRect(-8, -8, 16, 16);
+      ctx.beginPath();
+      ctx.moveTo(0, -12);
+      ctx.lineTo(24, 0);
+      ctx.lineTo(0, 12);
+      ctx.closePath();
+      ctx.fillStyle = '#ef4444';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function renderStatus() {
+      const state = model.state || {};
+      connectionPill.classList.toggle('connected', Boolean(state.robot_connected));
+      connectionPill.textContent = state.robot_connected ? 'Robot connected' : 'Robot disconnected';
+      goalStatus.textContent = state.goal_status || 'idle';
+
+      const battery = state.battery || {};
+      if (battery.connected && battery.percent !== null && battery.percent !== undefined) {
+        batteryStatus.textContent = `${round(battery.percent, 0)}% (${round(battery.voltage, 1)} V)`;
+      } else {
+        batteryStatus.textContent = '-';
+      }
+
+      motorBtn.classList.toggle('enabled', Boolean(state.motor_enabled));
+      motorBtn.classList.toggle('disabled', !state.motor_enabled);
+      motorBtn.innerHTML = state.motor_enabled ? 'Motor<br>Enabled' : 'Motor<br>Disabled';
+    }
+
+    function renderStations() {
+      const stations = model.state.stations || [];
+      const currentId = model.state.current_station_id;
+      stationGrid.replaceChildren();
+
+      for (const station of stations) {
+        const card = document.createElement('button');
+        card.className = `station-card${station.id === currentId ? ' active' : ''}`;
+        card.type = 'button';
+        card.title = `${round(station.x, 2)}, ${round(station.y, 2)}, ${round(deg(station.yaw || 0), 0)} deg`;
+
+        const name = document.createElement('span');
+        name.className = 'station-name';
+        name.textContent = station.name || 'Name';
+        card.appendChild(name);
+
+        const del = document.createElement('button');
+        del.className = 'station-delete';
+        del.type = 'button';
+        del.textContent = 'Hapus';
+        del.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          await deleteStation(station.id, station.name);
+        });
+        card.appendChild(del);
+
+        card.addEventListener('click', () => sendStationGoal(station.id, station.name));
+        stationGrid.appendChild(card);
+      }
+
+      const placeholders = Math.max(1, 3 - stations.length);
+      for (let index = 0; index < placeholders; index += 1) {
+        const placeholder = document.createElement('button');
+        placeholder.className = 'station-card placeholder';
+        placeholder.type = 'button';
+        placeholder.disabled = true;
+        placeholder.textContent = '...';
+        stationGrid.appendChild(placeholder);
+      }
+
+      stationMeta.textContent = `Stasion: ${stations.length} tersimpan`;
+    }
+
+    function setBusy(button, busy) {
+      if (!button) return;
+      button.disabled = busy;
+    }
+
+    async function addStation() {
+      const name = nameInput.value.trim();
+      if (!name) {
+        setMessage('Nama stasiun belum diisi');
+        return;
+      }
+
+      setBusy(addStationBtn, true);
+      try {
+        const payload = { ...posePayload(), name };
+        const result = await postJson(api.stations, payload);
+        if (!result.ok) {
+          setMessage(`Add stasion: ${result.message || 'gagal'}`);
+          return;
+        }
+        nameInput.value = '';
+        setMessage(`Stasion ${name} ditambahkan`);
+        await loadState();
+      } catch (error) {
+        setMessage(`Add stasion: ${error.message}`);
+      } finally {
+        setBusy(addStationBtn, false);
+      }
+    }
+
+    async function deleteStation(id, name) {
+      setMessage(`Menghapus ${name}`);
+      try {
+        const result = await requestJson(`${api.stations}/${id}`, { method: 'DELETE' });
+        setMessage(result.ok ? `Stasion ${name} dihapus` : `Hapus: ${result.message || 'gagal'}`);
+        await loadState();
+      } catch (error) {
+        setMessage(`Hapus: ${error.message}`);
+      }
+    }
+
+    async function sendStationGoal(id, name) {
+      setMessage(`Goal ke ${name}`);
+      try {
+        const result = await postJson(`${api.stations}/${id}/goal`);
+        setMessage(result.ok ? `Goal ${name} dikirim` : `Goal: ${result.message || result.status || 'gagal'}`);
+        await loadState();
+      } catch (error) {
+        setMessage(`Goal: ${error.message}`);
+      }
+    }
+
+    async function sendInitialPose() {
+      setBusy(initialPoseBtn, true);
+      try {
+        const result = await postJson(api.initialPose, posePayload());
+        setMessage(result.ok ? 'Initial pose dikirim' : 'Initial pose gagal');
+        await loadState();
+      } catch (error) {
+        setMessage(`Initial pose: ${error.message}`);
+      } finally {
+        setBusy(initialPoseBtn, false);
+      }
+    }
+
+    async function toggleMotor() {
+      const enabled = !(model.state && model.state.motor_enabled);
+      setBusy(motorBtn, true);
+      try {
+        const result = await postJson(api.motor, { enabled });
+        setMessage(result.message || (result.ok ? 'Motor updated' : 'Motor gagal'));
+        await loadState();
+      } catch (error) {
+        setMessage(`Motor: ${error.message}`);
+      } finally {
+        setBusy(motorBtn, false);
+      }
+    }
+
+    async function clearCostmaps() {
+      setBusy(clearCostmapsBtn, true);
+      try {
+        const result = await postJson(api.clearCostmaps);
+        setMessage(result.ok ? 'Jalur dibersihkan' : 'Clear costmap sebagian gagal');
+        await loadState();
+      } catch (error) {
+        setMessage(`Bersihkan jalur: ${error.message}`);
+      } finally {
+        setBusy(clearCostmapsBtn, false);
+      }
+    }
+
+    async function emergencyStop() {
+      setBusy(emergencyBtn, true);
+      try {
+        const result = await postJson(api.emergencyStop);
+        if (result.motor && result.motor.enabled === false) {
+          model.state.motor_enabled = false;
+          model.state.motor_message = result.motor.message || 'Motor DISABLED';
+          renderStatus();
+        }
+        setMessage(result.status || 'emergency_stop');
+        await loadState();
+      } catch (error) {
+        setMessage(`Emergency stop: ${error.message}`);
+      } finally {
+        setBusy(emergencyBtn, false);
+      }
+    }
+
+    function canvasPoint(event) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      };
+    }
+
+    canvas.addEventListener('pointerdown', (event) => {
+      const p = canvasPoint(event);
+      const world = canvasToWorld(p.x, p.y);
+      if (!world) return;
+
+      model.dragging = true;
+      model.dragStart = world;
+      model.selected.x = world.x;
+      model.selected.y = world.y;
+      canvas.setPointerCapture(event.pointerId);
+      pushSelectedToInputs();
+      draw();
+    });
+
+    canvas.addEventListener('pointermove', (event) => {
+      if (!model.dragging || !model.dragStart) return;
+      const p = canvasPoint(event);
+      const world = canvasToWorld(p.x, p.y);
+      if (!world) return;
+
+      const dx = world.x - model.dragStart.x;
+      const dy = world.y - model.dragStart.y;
+      if (Math.hypot(dx, dy) > 0.03) {
+        model.selected.yaw = Math.atan2(dy, dx);
+        pushSelectedToInputs();
+        draw();
+      }
+    });
+
+    canvas.addEventListener('pointerup', (event) => {
+      model.dragging = false;
+      model.dragStart = null;
+      try {
+        canvas.releasePointerCapture(event.pointerId);
+      } catch (error) {
+        // Pointer capture may already be released by the browser.
+      }
+    });
+
+    [xInput, yInput, yawInput].forEach((input) => {
+      input.addEventListener('input', selectedFromInputs);
+    });
+
+    addStationBtn.addEventListener('click', addStation);
+    initialPoseBtn.addEventListener('click', sendInitialPose);
+    motorBtn.addEventListener('click', toggleMotor);
+    clearCostmapsBtn.addEventListener('click', clearCostmaps);
+    emergencyBtn.addEventListener('click', emergencyStop);
+
+    window.addEventListener('resize', resizeCanvas);
+
+    const resizeObserver = new ResizeObserver(resizeCanvas);
+    resizeObserver.observe(canvas);
+
+    pushSelectedToInputs();
+    resizeCanvas();
+    loadMap();
+    loadState();
+    setInterval(loadState, 500);
+    setInterval(loadMap, 3000);
+  </script>
+</body>
+</html>
